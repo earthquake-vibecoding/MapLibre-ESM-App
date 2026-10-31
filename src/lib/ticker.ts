@@ -53,27 +53,26 @@ export class Ticker {
       this.host.updateVisibility();
     }
 
-    // 2. detected layer blink tick (500ms)
+    // 2+3. station event: 감지 블링/만료를 단일 패스로 처리 (프레임마다 Array.from 할당 방지)
     const mapCtl = this.host.mapCtl;
-    const stationsState = this.host.stationsState;
-    const hasDetectedEvents = Array.from(stationsState.values()).some(s => s.event !== null);
-    if (hasDetectedEvents && mapCtl) {
-      mapCtl.blinkDetected(Math.floor(now / 500) % 2 === 0);
-    }
-
-    // 3. station event expiration check
+    let activeCount = 0;
     let expired = false;
-    for (const stn of stationsState.values()) {
-      if (stn.event && stn.expireTime && now >= stn.expireTime) {
+    for (const stn of this.host.stationsState.values()) {
+      if (!stn.event) continue;
+      if (stn.expireTime && now >= stn.expireTime) {
         stn.event = null;
         stn.expireTime = null;
         expired = true;
+      } else {
+        activeCount++;
       }
+    }
+    if (activeCount > 0 && mapCtl) {
+      mapCtl.blinkDetected(Math.floor(now / 500) % 2 === 0);
     }
     if (expired) {
       this.host.updateDetectedEvents();
-      const hasActiveEvents = Array.from(stationsState.values()).some(s => s.event !== null);
-      if (!hasActiveEvents) {
+      if (activeCount === 0) {
         this.host.resetMapView();
         clearDetectedEvents();
       }

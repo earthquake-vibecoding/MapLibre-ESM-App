@@ -16,6 +16,14 @@
   }
 
   let { historyList, processedList, selectedQuake, groupUnknown, expandedGroupKeys, onSelectQuake, onToggleGroupUnknown, onToggleGroup, onCloseDrawer, onLoadMore }: Props = $props();
+
+  // 클릭 전용 행의 키보드 접근성 (Enter/Space)
+  function onRowKey(e: KeyboardEvent, action: () => void) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      action();
+    }
+  }
 </script>
 
 <div class="absolute top-12 right-0 bottom-0 z-30 w-full max-w-[380px] pointer-events-auto animate-drawer-in">
@@ -32,6 +40,7 @@
         <button
           onclick={onCloseDrawer}
           title="닫기"
+          aria-label="닫기"
           class="p-1 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 cursor-pointer">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
@@ -46,8 +55,11 @@
           {@const bStyle = getJindoBadgeStyle(item.earthquake?.maxScale)}
           {@const isSelected = selectedQuake?.id === item.id}
           <div
+            role="button"
+            tabindex="0"
             onclick={() => onSelectQuake(item)}
-            class={'py-2.5 px-2 cursor-pointer transition-colors flex items-center justify-between gap-3 ' + (isSelected ? 'bg-blue-50 border-l-2 border-blue-600 dark:bg-blue-950' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800')}>
+            onkeydown={(e) => onRowKey(e, () => onSelectQuake(item))}
+            class={'py-2.5 px-2 cursor-pointer transition-colors flex items-center justify-between gap-3 focus-visible:outline-2 focus-visible:outline-blue-600 ' + (isSelected ? 'bg-blue-50 border-l-2 border-blue-600 dark:bg-blue-950' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800')}>
 
             <div class="flex flex-col min-w-0 flex-1 gap-0.5">
               <div class="flex items-center gap-2 text-[11px] font-mono text-zinc-400">
@@ -77,8 +89,11 @@
 
           <div class="py-2.5 px-2 flex flex-col gap-2">
             <div
+              role="button"
+              tabindex="0"
               onclick={() => onSelectQuake(group.latestItem!)}
-              class="flex items-center justify-between gap-3 cursor-pointer">
+              onkeydown={(e) => onRowKey(e, () => onSelectQuake(group.latestItem!))}
+              class="flex items-center justify-between gap-3 cursor-pointer focus-visible:outline-2 focus-visible:outline-blue-600">
               <div class="flex flex-col min-w-0 flex-1 gap-1">
                 <div class="flex items-center gap-2 text-[11px] font-mono text-zinc-400">
                   <span class="px-1.5 py-0.5 rounded bg-blue-600 text-white font-bold text-[10px]">그룹</span>
@@ -107,8 +122,11 @@
                   {@const subBStyle = getJindoBadgeStyle(subItem.earthquake?.maxScale)}
                   {@const subSelected = selectedQuake?.id === subItem.id}
                   <div
+                    role="button"
+                    tabindex="0"
                     onclick={() => onSelectQuake(subItem)}
-                    class={'p-2 rounded-md cursor-pointer transition-colors flex items-center justify-between gap-2 text-xs ' + (subSelected ? 'bg-blue-50 dark:bg-blue-950' : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800 dark:hover:bg-zinc-700')}>
+                    onkeydown={(e) => onRowKey(e, () => onSelectQuake(subItem))}
+                    class={'p-2 rounded-md cursor-pointer transition-colors flex items-center justify-between gap-2 text-xs focus-visible:outline-2 focus-visible:outline-blue-600 ' + (subSelected ? 'bg-blue-50 dark:bg-blue-950' : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800 dark:hover:bg-zinc-700')}>
                     <div class="flex flex-col gap-0.5 min-w-0 flex-1">
                       <span class="font-mono text-[10px] text-zinc-400">{subItem.earthquake?.time || subItem.time}</span>
                       <span class="font-bold text-zinc-700 dark:text-zinc-200 truncate">

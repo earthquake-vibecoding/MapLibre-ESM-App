@@ -5,6 +5,13 @@ import { soundService } from './services/sound';
 import { notificationService } from './services/notification.svelte';
 import type { MapController } from './map-controller';
 
+// 감지 활성화 플래그 — app-init이 ?detect=true를 강제 세팅하므로 'false'로 명시한 경우에만 끔
+const DETECT_ENABLED =
+  typeof window === 'undefined' || new URLSearchParams(window.location.search).get('detect') !== 'false';
+
+// 마지막 이미지 요청 식별자 — 늦게 도착한 이전 로드의 onload가 최신 프레임을 덮지 않게 함
+let latestImgReq = 0;
+
 export interface RealtimeHost {
   readonly geojson: any | null;
   readonly stationsState: Map<string, any>;
@@ -51,6 +58,7 @@ function processRealtimeImage(time: string, host: RealtimeHost): void {
   const dataType = ui.realtimeDataType;
   const img = new Image();
   img.crossOrigin = 'anonymous';
+  const reqId = ++latestImgReq;
   img.src = `/api/realtime-img?time=${time}&type=${dataType}`;
   ui.currentGifUrl = img.src;
   ui.acmapGifUrl = `/api/acmap-img?time=${time}&type=${dataType}`;
@@ -61,6 +69,7 @@ function processRealtimeImage(time: string, host: RealtimeHost): void {
   }
 
   img.onload = () => {
+    if (reqId !== latestImgReq) return; // 더 최신 프레임 요청이 있으면 폐기
     const canvas = document.createElement('canvas');
     canvas.width = img.width;
     canvas.height = img.height;
@@ -69,10 +78,10 @@ function processRealtimeImage(time: string, host: RealtimeHost): void {
     ctx.drawImage(img, 0, 0);
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
 
-    const result = processFrame(imageData, canvas.width, canvas.height, geojson.features, host.stationsState);
+    const result = processFrame(imageData, canvas.width, canvas.height, geojson.features, host.stationsState, DETECT_ENABLED);
 
     if (result.soundJindo > -3) {
-      soundService.playShakeDetected();
+      soundService.playShakeDetected(result.soundJindo);
       notificationService.notifyShakingDetection(getJindoString(result.soundJindo) || String(result.soundJindo));
     }
 

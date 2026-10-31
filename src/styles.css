@@ -1,5 +1,4 @@
 /* Global styles */
-@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 /* 스캔 범위를 src/로 제한 — 루트의 대형 JSON까지 스캔해서 빌드가 26초 걸리는 것 방지 */
 @import "tailwindcss" source("./");
 

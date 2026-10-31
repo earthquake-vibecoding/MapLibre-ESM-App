@@ -8,6 +8,15 @@ import { focusOnEarthquake } from './focus';
 import type { AppController } from './app-controller';
 
 let lastSeenQuakeId: string | null = null;
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+/** 20초 이력 폴링 중지 — destroy 시 누수 방지 */
+export function stopQuakeFeed(): void {
+  if (pollTimer !== null) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+  }
+}
 
 export interface QuakeFeedHandlers {
   onInitialQuake: (item: any) => void;
@@ -80,7 +89,8 @@ export async function startQuakeFeed(handlers: QuakeFeedHandlers): Promise<void>
   wolfxEewService.connectWebSocket((_mappedEew) => handlers.onEew(_mappedEew));
 
   if (typeof window !== 'undefined') {
-    setInterval(async () => {
+    stopQuakeFeed();
+    pollTimer = setInterval(async () => {
       const updatedHistory = await p2pQuakeService.fetchHistory(0);
       if (updatedHistory.length > 0) {
         const newest = updatedHistory[0];

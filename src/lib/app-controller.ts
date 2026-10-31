@@ -7,7 +7,8 @@ import type { Ticker } from './ticker';
 import { buildDetectedFeatures, loadDetectedEvents, saveDetectedEvents } from './grid';
 import { applyAreaIntensity } from './area-intensity';
 import { buildEpicenterFeatures, buildMockEew, isActiveEEW } from './quake-utils';
-import { focusActiveGrids, focusOnEarthquake, focusOnEew, focusOnEpicenter } from './focus';import { updateMaskLayer } from './est-shindo';
+import { focusActiveGrids, focusOnEarthquake, focusOnEew, focusOnEpicenter } from './focus';
+import { updateMaskLayer } from './est-shindo';
 import { soundService } from './services/sound';
 import { notificationService } from './services/notification.svelte';
 

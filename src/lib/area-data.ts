@@ -7,12 +7,19 @@ export interface AreaData {
 }
 
 export async function loadAreaData(): Promise<AreaData> {
-  const [areaRes, stationRes] = await Promise.all([
-    fetch('/area_forecast.json'),
-    fetch('/JMAstations.json')
-  ]);
-  const areaForecastGeoJSON = await areaRes.json();
-  const stations = await stationRes.json();
+  let areaForecastGeoJSON: any = null;
+  let stations: any[] = [];
+  try {
+    const [areaRes, stationRes] = await Promise.all([
+      fetch('/area_forecast.json'),
+      fetch('/JMAstations.json')
+    ]);
+    if (!areaRes.ok || !stationRes.ok) throw new Error(`HTTP ${areaRes.status}/${stationRes.status}`);
+    areaForecastGeoJSON = await areaRes.json();
+    stations = await stationRes.json();
+  } catch (e) {
+    console.error('지역 데이터 로드 실패 — 빈 데이터로 계속:', e);
+  }
   const stMap = new Map<string, any>();
 
   const stationToAreaCode = new Map<string, string>();

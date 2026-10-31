@@ -67,17 +67,6 @@ export function baseStyle(): any {
   };
 }
 
-export const GEO_SOURCE_IDS = [
-  'area-forecast',
-  'points',
-  'detected',
-  'p-wave',
-  's-wave',
-  'p2p-epicenter',
-  'quake-stations',
-  'est-shindo-mask-area'
-] as const;
-
 export function geoSources(): [string, any][] {
   const empty = { type: 'FeatureCollection', features: [] };
   return [

@@ -64,6 +64,7 @@
   <div class="flex items-center gap-0.5 shrink-0">
     <button
       onclick={onToggleNotification}
+      aria-label="브라우저 알림 설정"
       title={notificationPermission === 'granted'
         ? (notificationEnabled ? '브라우저 알림 ON (클릭 시 OFF)' : '브라우저 알림 OFF (클릭 시 ON)')
         : '브라우저 알림 권한 허용 요청'}
@@ -82,6 +83,7 @@
     </button>
     <button
       onclick={onToggleDarkMode}
+      aria-label={isDarkMode ? '라이트 모드로 전환' : '다크 모드로 전환'}
       title={isDarkMode ? '라이트 모드로 전환' : '다크 모드로 전환'}
       class={sideBtn}>
       {#if isDarkMode}

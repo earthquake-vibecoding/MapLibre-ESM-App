@@ -1,3 +1,5 @@
+import { scaleToJmaString } from '../quake-utils';
+
 export class NotificationService {
   permission = $state<NotificationPermission>('default');
   isEnabled = $state(true);
@@ -119,7 +121,7 @@ export class NotificationService {
     const depth = quake.earthquake?.hypocenter?.depth;
     const depthStr = depth !== undefined && depth !== -1 ? `깊이 ${depth}km` : '';
     const maxScale = quake.earthquake?.maxScale;
-    const maxScaleStr = maxScale !== undefined ? `최대진도` : '';
+    const maxScaleStr = maxScale !== undefined && maxScale !== -1 ? `최대진도 ${scaleToJmaString(maxScale)}` : '';
 
     const title = `📢 신규 지진 정보`;
     const details = [name, magStr, depthStr, maxScaleStr].filter(Boolean).join(' | ');

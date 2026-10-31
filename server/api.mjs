@@ -23,6 +23,42 @@ async function fetchWithTimeout(url, ms = 3000) {
   }
 }
 
+// 간단 고정윈도우 레이트 리밋 (IP당) — kmoni 증폭 프록시 방지
+const hits = new Map();
+function rateLimit(max, windowMs) {
+  return (req, res, next) => {
+    const ip = req.socket.remoteAddress || 'unknown';
+    const now = Date.now();
+    let h = hits.get(ip);
+    if (!h || now - h[0] > windowMs) {
+      h = [now, 0];
+      hits.set(ip, h);
+      if (hits.size > 1000) {
+        for (const [k, v] of hits) {
+          if (now - v[0] > windowMs) hits.delete(k);
+        }
+      }
+    }
+    h[1]++;
+    if (h[1] > max) {
+      res.status(429).json({ error: 'Too many requests' });
+      return;
+    }
+    next();
+  };
+}
+app.use(rateLimit(120, 10000));
+
+// time 파라미터 검증: 14자리 숫자만 허용 (경로 순회/쿼리 주입 차단)
+function validTime(req, res) {
+  const time = req.query['time'];
+  if (typeof time !== 'string' || !/^\d{14}$/.test(time)) {
+    res.status(400).json({ error: 'Invalid time parameter' });
+    return null;
+  }
+  return time;
+}
+
 async function sendImage(res, url, fallback) {
   try {
     const response = await fetchWithTimeout(url);
@@ -40,23 +76,28 @@ async function sendImage(res, url, fallback) {
   }
 }
 
+// 정적 데이터 — 파싱 결과 1회 캐시 (요청마다 readFileSync 블로킹 방지)
+let seismicTableCache = null;
 app.get('/seismic-data', (req, res) => {
   try {
-    const lines = readFileSync(TJMA_PATH, 'utf-8').split('\n');
-    const result = {};
-    for (const line of lines) {
-      if (!line.trim()) continue;
-      const parts = line.trim().split(/\s+/);
-      if (parts.length === 6 && parts[0] === 'P' && parts[2] === 'S') {
-        const depth = parts[4];
-        (result[depth] ??= []).push({
-          distance: parseFloat(parts[5]),
-          pTime: parseFloat(parts[1]),
-          sTime: parseFloat(parts[3]),
-        });
+    if (!seismicTableCache) {
+      const lines = readFileSync(TJMA_PATH, 'utf-8').split('\n');
+      const result = {};
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const parts = line.trim().split(/\s+/);
+        if (parts.length === 6 && parts[0] === 'P' && parts[2] === 'S') {
+          const depth = parts[4];
+          (result[depth] ??= []).push({
+            distance: parseFloat(parts[5]),
+            pTime: parseFloat(parts[1]),
+            sTime: parseFloat(parts[3]),
+          });
+        }
       }
+      seismicTableCache = result;
     }
-    res.json(result);
+    res.json(seismicTableCache);
   } catch (error) {
     console.warn('Failed to read seismic data:', error);
     res.status(500).json({ error: 'Failed to read data' });
@@ -98,40 +139,28 @@ function kmoniEewImgUrl(time, kind) {
 }
 
 app.get('/acmap-img', (req, res) => {
-  const time = req.query['time'];
-  if (!time || typeof time !== 'string') {
-    res.status(400).json({ error: 'Missing time parameter' });
-    return;
-  }
+  const time = validTime(req, res);
+  if (!time) return;
   const type = req.query['type'] === 'jma_b' ? 'acmap_b' : 'acmap_s';
   sendImage(res, kmoniRealtimeImgUrl(time, type), false);
 });
 
 app.get('/realtime-img', (req, res) => {
-  const time = req.query['time'];
-  if (!time || typeof time !== 'string') {
-    res.status(400).json({ error: 'Missing time parameter' });
-    return;
-  }
+  const time = validTime(req, res);
+  if (!time) return;
   const imgType = req.query['type'] === 'jma_b' ? 'jma_b' : 'jma_s';
   sendImage(res, kmoniRealtimeImgUrl(time, imgType), false);
 });
 
 app.get('/pswave-img', (req, res) => {
-  const time = req.query['time'];
-  if (!time || typeof time !== 'string') {
-    res.status(400).json({ error: 'Missing time parameter' });
-    return;
-  }
+  const time = validTime(req, res);
+  if (!time) return;
   sendImage(res, kmoniEewImgUrl(time, 'PSWaveImg'), true);
 });
 
 app.get('/estshindo-img', (req, res) => {
-  const time = req.query['time'];
-  if (!time || typeof time !== 'string') {
-    res.status(400).json({ error: 'Missing time parameter' });
-    return;
-  }
+  const time = validTime(req, res);
+  if (!time) return;
   sendImage(res, kmoniEewImgUrl(time, 'EstShindoImg'), true);
 });
 

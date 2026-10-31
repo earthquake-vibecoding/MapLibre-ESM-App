@@ -67,15 +67,6 @@ export interface EEWMessage {
   areas?: any[];
 }
 
-export interface StationState {
-  id: string;
-  name: string;
-  lonlat: [number, number];
-  intensity: number;
-  event: any | null;
-  lastUpdated?: number;
-}
-
 export interface ProcessedHistoryItem {
   isGroup: boolean;
   item?: P2PQuakeItem;

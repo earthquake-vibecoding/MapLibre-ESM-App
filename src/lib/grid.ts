@@ -112,10 +112,14 @@ export function saveDetectedEvents(stationsState: Map<string, any>): void {
   }
 
   if (activeStations.length > 0) {
-    localStorage.setItem('eq_detected_stations', JSON.stringify({
-      timestamp: Date.now(),
-      stations: activeStations
-    }));
+    try {
+      localStorage.setItem('eq_detected_stations', JSON.stringify({
+        timestamp: Date.now(),
+        stations: activeStations
+      }));
+    } catch {
+      // quota/private mode — 저장 실패는 치명적이지 않음
+    }
   } else {
     clearDetectedEvents();
   }

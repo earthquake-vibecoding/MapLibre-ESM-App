@@ -1,5 +1,49 @@
 import colorMapData from '../../KyoshinShindoColorMap.json';
 
+/**
+ * JMA 진도계급 단일 테이블 — 코드/라벨/색상/계측진도 임계값의 유일한 출처.
+ * scale: P2PQuake·kmoni 진도 코드 (10=진도1 … 60=진도7, 45/46=5弱/5強 …)
+ * threshold: 계측진도(jindo)가 이 값 이상이면 해당 계급 (jindoToScale)
+ */
+export interface JmaLevel {
+  scale: number;
+  threshold: number;
+  label: string;
+  short: string;
+  color: string;
+}
+
+export const JMA_LEVELS: JmaLevel[] = [
+  { scale: 10, threshold: 0.5, label: '진도 1', short: '1',   color: '#7F8C8D' },
+  { scale: 20, threshold: 1.5, label: '진도 2', short: '2',   color: '#0055FF' },
+  { scale: 30, threshold: 2.5, label: '진도 3', short: '3',   color: '#00BFFF' },
+  { scale: 40, threshold: 3.5, label: '진도 4', short: '4',   color: '#FFE600' },
+  { scale: 45, threshold: 4.5, label: '진도 5弱', short: '5弱', color: '#FF9900' },
+  { scale: 46, threshold: 5.0, label: '진도 5強', short: '5強', color: '#FF5500' },
+  { scale: 50, threshold: 5.5, label: '진도 6弱', short: '6弱', color: '#FF0000' },
+  { scale: 55, threshold: 6.0, label: '진도 6強', short: '6強', color: '#A00000' },
+  { scale: 60, threshold: 6.5, label: '진도 7', short: '7',   color: '#990099' }
+];
+
+function levelByScale(scale: number): JmaLevel | null {
+  return JMA_LEVELS.find(l => l.scale === scale) ?? null;
+}
+
+function levelByScaleAtLeast(scale: number): JmaLevel | null {
+  for (let i = JMA_LEVELS.length - 1; i >= 0; i--) {
+    if (scale >= JMA_LEVELS[i].scale) return JMA_LEVELS[i];
+  }
+  return null;
+}
+
+/** 계측진도 → 진도계급 코드 (0 = 불명/미감지) */
+export function jindoToScale(maxJindo: number): number {
+  for (let i = JMA_LEVELS.length - 1; i >= 0; i--) {
+    if (maxJindo >= JMA_LEVELS[i].threshold) return JMA_LEVELS[i].scale;
+  }
+  return 0;
+}
+
 export interface JindoBadgeStyle {
   bg: string;
   text: string;
@@ -7,17 +51,34 @@ export interface JindoBadgeStyle {
   label: string;
 }
 
+// 배지 프레젠테이션 클래스 (색상 로직은 JMA_LEVELS.color와 별개 — Tailwind 클래스 제약)
+const BADGE_CLASSES: Record<number, { bg: string; text: string; border: string }> = {
+  10: { bg: 'bg-emerald-600', text: 'text-white', border: 'border-emerald-400' },
+  20: { bg: 'bg-emerald-500', text: 'text-white', border: 'border-emerald-300' },
+  30: { bg: 'bg-cyan-600', text: 'text-white', border: 'border-cyan-400' },
+  40: { bg: 'bg-amber-500', text: 'text-zinc-950', border: 'border-amber-300' },
+  45: { bg: 'bg-orange-600', text: 'text-white', border: 'border-orange-400' },
+  46: { bg: 'bg-rose-600', text: 'text-white', border: 'border-rose-400' },
+  50: { bg: 'bg-red-600', text: 'text-white', border: 'border-red-400' },
+  55: { bg: 'bg-red-700', text: 'text-white', border: 'border-red-500' },
+  60: { bg: 'bg-purple-700', text: 'text-white', border: 'border-purple-400' }
+};
+
 export function getJindoBadgeStyle(scale: number | undefined): JindoBadgeStyle {
-  if (scale === 10) return { bg: 'bg-emerald-600', text: 'text-white', border: 'border-emerald-400', label: '진도 1' };
-  if (scale === 20) return { bg: 'bg-emerald-500', text: 'text-white', border: 'border-emerald-300', label: '진도 2' };
-  if (scale === 30) return { bg: 'bg-cyan-600', text: 'text-white', border: 'border-cyan-400', label: '진도 3' };
-  if (scale === 40) return { bg: 'bg-amber-500', text: 'text-zinc-950', border: 'border-amber-300', label: '진도 4' };
-  if (scale === 45) return { bg: 'bg-orange-600', text: 'text-white', border: 'border-orange-400', label: '진도 5弱' };
-  if (scale === 46) return { bg: 'bg-rose-600', text: 'text-white', border: 'border-rose-400', label: '진도 5強' };
-  if (scale === 50) return { bg: 'bg-red-600', text: 'text-white', border: 'border-red-400', label: '진도 6弱' };
-  if (scale === 55) return { bg: 'bg-red-700', text: 'text-white', border: 'border-red-500', label: '진도 6強' };
-  if (scale === 60) return { bg: 'bg-purple-700', text: 'text-white', border: 'border-purple-400', label: '진도 7' };
-  return { bg: 'bg-zinc-600', text: 'text-zinc-200', border: 'border-zinc-500', label: '불명' };
+  const unknown = { bg: 'bg-zinc-600', text: 'text-zinc-200', border: 'border-zinc-500', label: '불명' };
+  if (scale === undefined) return unknown;
+  const cls = BADGE_CLASSES[scale];
+  if (!cls) return unknown;
+  return { ...cls, label: levelByScale(scale)?.label ?? '불명' };
+}
+
+export function getJindoString(scale: number | undefined): string {
+  if (scale === undefined) return '불명';
+  return levelByScale(scale)?.short ?? '불명';
+}
+
+export function getIntensityColor(scale: number): string {
+  return levelByScaleAtLeast(scale)?.color ?? 'transparent';
 }
 
 export function getTsunamiText(domesticTsunami: string | undefined): { text: string; colorClass: string } {
@@ -27,32 +88,6 @@ export function getTsunamiText(domesticTsunami: string | undefined): { text: str
   if (domesticTsunami === 'Watch') return { text: '해일 주의보 발령', colorClass: 'text-amber-500 font-bold' };
   if (domesticTsunami === 'Warning') return { text: '해일 경보 발령', colorClass: 'text-red-500 font-bold animate-pulse' };
   return { text: '해일 정보 없음', colorClass: 'text-zinc-400' };
-}
-
-export function getJindoString(scale: number | undefined): string {
-  if (scale === 10) return '1';
-  if (scale === 20) return '2';
-  if (scale === 30) return '3';
-  if (scale === 40) return '4';
-  if (scale === 45) return '5弱';
-  if (scale === 46) return '5強';
-  if (scale === 50) return '6弱';
-  if (scale === 55) return '6強';
-  if (scale === 60) return '7';
-  return '불명';
-}
-
-export function getIntensityColor(scale: number): string {
-  if (scale >= 60) return '#990099';
-  if (scale >= 55) return '#A00000';
-  if (scale >= 50) return '#FF0000';
-  if (scale >= 46) return '#FF5500';
-  if (scale >= 45) return '#FF9900';
-  if (scale >= 40) return '#FFE600';
-  if (scale >= 30) return '#00BFFF';
-  if (scale >= 20) return '#0055FF';
-  if (scale >= 10) return '#7F8C8D';
-  return 'transparent';
 }
 
 interface ColorMapItem {

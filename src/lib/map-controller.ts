@@ -1,6 +1,6 @@
-import { baseStyle, geoSources, JAPAN_MAIN_BOUNDS, MAP_CENTER, MAP_ZOOM } from './map-style';
-import { mapLayers } from './map-layers';
-import { bindStationPopups, createStationHighlightMarker, type StationLocation } from './map-marker';
+import { JAPAN_MAIN_BOUNDS } from './map-style';
+import { bootMap, createMapControllerInstance } from './map-boot';
+import { createStationHighlightMarker, type StationLocation } from './map-marker';
 
 export interface VisState {
   tab: 'realtime' | 'earthquake' | 'est_shindo_region';
@@ -13,7 +13,6 @@ export interface VisState {
 
 export class MapController {
   readonly map: any;
-  private Popup: any;
   private Marker: any;
   private initialData = new Map<string, any>();
   private stationMarker: any = null;
@@ -27,45 +26,10 @@ export class MapController {
 
   constructor(map: any, Popup: any, Marker: any) {
     this.map = map;
-    this.Popup = Popup;
     this.Marker = Marker;
     this.ready = new Promise(resolve => {
       map.on('load', () => {
-        for (const [id, data] of this.initialData) {
-          map.addSource(id, { type: 'geojson', data });
-        }
-        for (const [id, data] of geoSources()) {
-          if (!map.getSource(id)) {
-            map.addSource(id, { type: 'geojson', data });
-          }
-        }
-        for (const layer of mapLayers()) {
-          map.addLayer(layer);
-        }
-        bindStationPopups(map, Popup);
-        // 진원지 X 아이콘 등록 (고해상도 캔버스 → 확대해도 계단 현상 없음)
-        const size = 96;
-        const canvas = document.createElement('canvas');
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          const drawX = (color: string, w: number) => {
-            ctx.strokeStyle = color;
-            ctx.lineWidth = w;
-            ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.moveTo(18, 18);
-            ctx.lineTo(size - 18, size - 18);
-            ctx.moveTo(size - 18, 18);
-            ctx.lineTo(18, size - 18);
-            ctx.stroke();
-          };
-          drawX('#ffffff', 30);
-          drawX('#ef4444', 18);
-          map.addImage('epicenter-x', ctx.getImageData(0, 0, size, size), { pixelRatio: 4 });
-        }
-        map.fitBounds(JAPAN_MAIN_BOUNDS, { padding: 48, pitch: 0, bearing: 0, duration: 0 });
+        bootMap(map, Popup, this.initialData);
         resolve();
       });
     });
@@ -221,24 +185,6 @@ export class MapController {
 }
 
 export async function createMapController(container: HTMLElement): Promise<MapController> {
-  // esbuild 등의 번들러가 URL import를 해석하려다 실패하는 것을 방지하기 위해
-  // 네이티브 동적 import를 사용합니다.
-  const maplibreModule = await new Function("return import('https://esm.sh/maplibre-gl@3')")();
-  // esm.sh CDN의 default export와 named export를 모두 확인하여 사용합니다.
-  const { Map, Popup, Marker } = maplibreModule;
-
-  const map = new Map({
-    container,
-    renderWorldCopies: false,
-    style: baseStyle(),
-    center: MAP_CENTER,
-    zoom: MAP_ZOOM,
-    attributionControl: false // UI 제거 요구사항 반영
-  });
-
-  map.on('error', (e: any) => {
-    console.error('Map error:', e);
-  });
-
+  const { map, Popup, Marker } = await createMapControllerInstance(container);
   return new MapController(map, Popup, Marker);
 }

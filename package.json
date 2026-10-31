@@ -10,7 +10,8 @@
     "start": "node server/index.mjs",
     "test": "vitest run",
     "electron:dev": "concurrently -k \"pnpm dev\" \"wait-on http://localhost:3000 && electron .\"",
-    "electron:start": "electron ."
+    "electron:start": "electron .",
+    "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "private": true,
   "dependencies": {
@@ -21,10 +22,14 @@
     "@tailwindcss/vite": "^4.1.12",
     "@types/express": "^5.0.1",
     "@types/node": "^20.17.19",
+    "concurrently": "^10.0.6",
+    "electron": "^45.1.0",
     "svelte": "^5.38.0",
+    "svelte-check": "^4.7.7",
     "tailwindcss": "^4.1.12",
     "typescript": "~5.9.2",
     "vite": "^7.1.0",
-    "vitest": "^4.0.0"
+    "vitest": "^4.0.0",
+    "wait-on": "^9.5.1"
   }
 }

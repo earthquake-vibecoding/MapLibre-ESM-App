@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { app } from './lib/app-controller';
-  import { initApp } from './lib/app-init';
+  import { initApp, destroyApp } from './lib/app-init';
   import { ui } from './lib/state.svelte';
   import { p2pQuakeService } from './lib/services/p2p-quake.svelte';
   import { wolfxEewService } from './lib/services/wolfx-eew.svelte';
@@ -35,7 +35,7 @@
 
   onMount(() => {
     if (mapEl) initApp(mapEl);
-    return () => app.destroy();
+    return () => destroyApp();
   });
 </script>
 

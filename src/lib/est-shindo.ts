@@ -1,4 +1,4 @@
-import { getJindoFromColor, getIntensityColor } from './jma-utils';
+import { getJindoFromColor, getIntensityColor, jindoToScale } from './jma-utils';
 import { PolyProj, buildLUT } from './polyfit';
 import type { MapController } from './map-controller';
 
@@ -56,10 +56,15 @@ class EstShindoMask {
     if (!this.offscreenCtx || !gifUrl) return resultMap;
 
     return new Promise((resolve) => {
+      // GIF 로드가 걸리면 영원히 pending 되는 것 방지
+      const timeoutId = setTimeout(() => resolve(resultMap), 8000);
+      const done = () => clearTimeout(timeoutId);
+
       const img = new Image();
       img.crossOrigin = 'anonymous';
 
       img.onload = () => {
+        done();
         try {
           const ctx = this.offscreenCtx!;
           ctx.clearRect(0, 0, 352, 400);
@@ -94,6 +99,7 @@ class EstShindoMask {
       };
 
       img.onerror = () => {
+        done();
         resolve(resultMap);
       };
 
@@ -131,19 +137,6 @@ class EstShindoMask {
       })
     };
   }
-}
-
-function jindoToScale(maxJindo: number): number {
-  if (maxJindo >= 6.5) return 60;
-  if (maxJindo >= 6.0) return 55;
-  if (maxJindo >= 5.5) return 50;
-  if (maxJindo >= 5.0) return 46;
-  if (maxJindo >= 4.5) return 45;
-  if (maxJindo >= 3.5) return 40;
-  if (maxJindo >= 2.5) return 30;
-  if (maxJindo >= 1.5) return 20;
-  if (maxJindo >= 0.5) return 10;
-  return 0;
 }
 
 function maskOpacity(info?: { color: string; maxJindo: number }): number {

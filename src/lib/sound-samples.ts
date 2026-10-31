@@ -9,7 +9,7 @@ import { parseScale } from './chime';
 const FILES = ['shi0.wav', 'shi1.wav', 'shi2.wav', 'shi3.wav', 'shi4.wav', 'shi5.wav', 'shi6.wav', 'shi7.wav'];
 const cache = new Map<number, HTMLAudioElement>();
 const failed = new Set<number>();
-let lastPlay = 0;
+const lastPlay = new Map<number, number>(); // 인덱스별 쓰로틀 — 다른 진도 소리는 동시 재생 허용
 
 export function shindoSampleIndex(scale: number | string | undefined): number {
   const n = parseScale(scale);
@@ -20,10 +20,11 @@ export function shindoSampleIndex(scale: number | string | undefined): number {
 function playIdx(idx: number, vol = 1): boolean {
   if (failed.has(idx)) return false;
 
-  // 원본 newShi 비프 쓰로틀 120ms
+  // 원본 newShi 비프 쓰로틀 120ms (같은 파일 연속 재생 방지)
   const now = performance.now();
-  if (now - lastPlay < 120) return true;
-  lastPlay = now;
+  const last = lastPlay.get(idx) ?? -Infinity;
+  if (now - last < 120) return true;
+  lastPlay.set(idx, now);
 
   let audio = cache.get(idx);
   if (!audio) {

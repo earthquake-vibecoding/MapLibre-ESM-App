@@ -9,7 +9,17 @@ const distDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'd
 export function startServer(port = Number(process.env.PORT) || 3000) {
   const app = express();
   app.use('/api', apiRouter);
-  app.use(express.static(distDir, { index: false, maxAge: '1y' }));
+  // 해시된 assets만 1년 캐시, 나머지는 재검증 (데이터 파일 갱신이 묵히지 않게)
+  app.use(express.static(distDir, {
+    index: false,
+    setHeaders(res, filePath) {
+      if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else {
+        res.setHeader('Cache-Control', 'no-cache');
+      }
+    }
+  }));
   app.use((req, res) => {
     res.sendFile(path.join(distDir, 'index.html'));
   });

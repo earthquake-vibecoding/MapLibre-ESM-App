@@ -9,12 +9,25 @@
   }
 
   let { hasDetectedGrids, onTriggerEewSimulation, onFocusDetectedGrid, onClose }: Props = $props();
+
+  let dialogEl: HTMLElement | undefined = $state();
+
+  $effect(() => {
+    dialogEl?.focus();
+  });
+
+  function onKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape') onClose();
+  }
 </script>
 
-<div class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onclick={onClose} role="presentation">
+<svelte:window onkeydown={onKeydown} />
+
+<div class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onclick={(e) => { if (e.target === e.currentTarget) onClose(); }} role="presentation">
   <div
-    class="w-full max-w-sm rounded-lg shadow-xl border border-zinc-200 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 p-5 flex flex-col gap-4 animate-modal-in"
-    onclick={(e) => e.stopPropagation()} role="dialog" aria-label="도구" tabindex="-1">
+    bind:this={dialogEl}
+    class="w-full max-w-sm rounded-lg shadow-xl border border-zinc-200 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 p-5 flex flex-col gap-4 animate-modal-in focus:outline-none"
+    role="dialog" aria-label="도구" tabindex="-1">
     <div class="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-zinc-700">
       <h3 class="font-bold text-base">도구</h3>
       <button

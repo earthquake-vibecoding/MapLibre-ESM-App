@@ -140,7 +140,7 @@
           {#if viewMode === 'areas'}
             {#if item.areas && item.areas.length > 0}
               <div class="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
-                {#each item.areas as area, i (area.name + i)}
+                {#each item.areas as area, i ((area.name ?? '') + i)}
                   <div class="flex items-center justify-between py-2">
                     <div class="flex items-center gap-2 min-w-0">
                       <span class="text-xs font-bold text-zinc-400 shrink-0">{area.prefName}</span>
@@ -160,7 +160,7 @@
           {/if}
 
           <details>
-            <summary class="text-[11px] font-bold cursor-pointer text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 outline-none">원본 JSON</summary>
+            <summary class="text-[11px] font-bold cursor-pointer text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 outline-none focus-visible:outline-2 focus-visible:outline-blue-600 rounded">원본 JSON</summary>
             <div class="mt-2 text-[10px] sm:text-xs font-mono overflow-x-auto p-2 bg-zinc-100 dark:bg-zinc-900 rounded border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300">
               <pre><code>{getRawData(item)}</code></pre>
             </div>

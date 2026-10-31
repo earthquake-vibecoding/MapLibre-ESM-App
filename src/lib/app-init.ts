@@ -6,9 +6,19 @@ import { loadAreaData } from './area-data';
 import { loadStations } from './stations';
 import { fetchSeismicData } from './seismic';
 import { Ticker } from './ticker';
-import { createFeedHandlers, startQuakeFeed } from './quake-feed';
+import { createFeedHandlers, startQuakeFeed, stopQuakeFeed } from './quake-feed';
+
+// HMR/리마운트 시 이전 initApp이 아직 await 중일 수 있음 — 시퀀스로 판별해 폐기
+let initSeq = 0;
+
+export function destroyApp(): void {
+  initSeq++;
+  stopQuakeFeed();
+  app.destroy();
+}
 
 export async function initApp(container: HTMLElement): Promise<void> {
+  const seq = ++initSeq;
   try {
     const savedType = localStorage.getItem('realtime_data_type');
     if (savedType === 'jma_s' || savedType === 'jma_b') ui.realtimeDataType = savedType;
@@ -31,8 +41,17 @@ export async function initApp(container: HTMLElement): Promise<void> {
   } catch (error) {
     console.warn('Failed to load maplibre-gl from esm.sh:', error);
   }
+  if (seq !== initSeq) {
+    // 대기 중에 destroy됨 — 새로 만든 맵이 있으면 회수하고 중단
+    app.mapCtl?.destroy();
+    return;
+  }
 
   const [areaData, stationData] = await Promise.all([loadAreaData(), loadStations()]);
+  if (seq !== initSeq) {
+    app.mapCtl?.destroy();
+    return;
+  }
   app.areaData = areaData;
   app.geojson = stationData.geojson;
   app.stationsState = stationData.stationsState;

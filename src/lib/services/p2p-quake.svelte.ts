@@ -1,15 +1,13 @@
 import type { P2PQuakeItem } from '../models';
 import { scaleToJmaString } from '../quake-utils';
+import { connectWithRetry, type WsRetryHandle } from './ws-connect';
 
 export class P2pQuakeService {
   p2pQuakeData = $state<P2PQuakeItem | null>(null);
   p2pHistoryList = $state<P2PQuakeItem[]>([]);
   selectedQuake = $state<P2PQuakeItem | null>(null);
 
-  private p2pWs: WebSocket | null = null;
-  private isIntentionalDisconnect = false;
-  private reconnectAttempt = 0;
-  private maxReconnectDelay = 30000;
+  private wsHandle: WsRetryHandle | null = null;
 
   private sortHistory(list: P2PQuakeItem[]): P2PQuakeItem[] {
     return [...list].sort((a, b) => {
@@ -67,98 +65,59 @@ export class P2pQuakeService {
     onEewReceived: (mappedEew: any) => void
   ) {
     if (typeof WebSocket === 'undefined') return;
-    // 재접속 시 이전 소켓 잔존 방지
-    const old = this.p2pWs;
-    if (old) {
-      this.p2pWs = null;
-      try {
-        old.onclose = null;
-        old.onerror = null;
-        old.close();
-      } catch {
-        // ignore
-      }
-    }
-    this.isIntentionalDisconnect = false;
-    const ws = new WebSocket('wss://api.p2pquake.net/v2/ws');
-    this.p2pWs = ws;
+    this.wsHandle?.disconnect();
+    this.wsHandle = connectWithRetry('wss://api.p2pquake.net/v2/ws', {
+      name: 'P2P',
+      onOpen: () => console.log('P2P WebSocket connected successfully'),
+      onMessage: (data) => this.handleMessage(data, onNewQuake, onEewReceived)
+    });
+  }
 
-    ws.onopen = () => {
-      this.reconnectAttempt = 0;
-      console.log('P2P WebSocket connected successfully');
-    };
+  private handleMessage(data: any, onNewQuake: (d: P2PQuakeItem) => void, onEewReceived: (e: any) => void): void {
+    if (data.code === 551) {
+      this.p2pQuakeData = data;
+      this.selectedQuake = data;
 
-    ws.onerror = () => {
-      console.warn('P2P WebSocket error occurred');
-    };
+      const filtered = this.p2pHistoryList.filter(item => {
+        if (data.id && item.id === data.id) return false;
+        if (data.time && item.time === data.time) return false;
+        if (data.earthquake?.time && item.earthquake?.time === data.earthquake?.time && item.issue?.type === data.issue?.type) return false;
+        return true;
+      });
+      this.p2pHistoryList = this.sortHistory([data, ...filtered]).slice(0, 100);
 
-    ws.onmessage = (event: MessageEvent) => {      try {
-        const data = JSON.parse(event.data);
-        if (data.code === 551) {
-          this.p2pQuakeData = data;
-          this.selectedQuake = data;
-
-          const filtered = this.p2pHistoryList.filter(item => {
-            if (data.id && item.id === data.id) return false;
-            if (data.time && item.time === data.time) return false;
-            if (data.earthquake?.time && item.earthquake?.time === data.earthquake?.time && item.issue?.type === data.issue?.type) return false;
-            return true;
-          });
-          this.p2pHistoryList = this.sortHistory([data, ...filtered]).slice(0, 100);
-
-          onNewQuake(data);
-
-          setTimeout(() => {
-            if (this.p2pQuakeData?.id === data.id) {
-              this.p2pQuakeData = null;
-            }
-          }, 3 * 60 * 1000);
-        } else if (data.code === 556) {
-          const maxScaleFrom = Math.max(...(data.areas?.map((a: any) => a.scaleFrom) || [0]));
-
-          const mappedEew = {
-            Title: '緊急地震速報 (P2P)',
-            Issue: { Status: '通常' },
-            AnnouncedTime: data.time,
-            OriginTime: data.earthquake?.originTime,
-            Hypocenter: data.earthquake?.hypocenter?.name || '不明',
-            Latitude: data.earthquake?.hypocenter?.latitude || 0,
-            Longitude: data.earthquake?.hypocenter?.longitude || 0,
-            Depth: data.earthquake?.hypocenter?.depth || 0,
-            Magunitude: data.earthquake?.hypocenter?.magnitude || 0,
-            MaxIntensity: scaleToJmaString(maxScaleFrom),
-            isWarn: false,
-            isCancel: false
-          };
-
-          onEewReceived(mappedEew);
-        }
-      } catch (e) {
-        console.warn('P2P WebSocket parse error', e);
-      }
-    };
-
-    ws.onclose = () => {
-      // 재접속은 setTimeout 사용: 백그라운드 탭에서 rAF가 멈춰도 재접속이 유지되도록
-      if (this.p2pWs !== ws || this.isIntentionalDisconnect) return;
-      const delay = Math.min(5000 * Math.pow(1.5, this.reconnectAttempt), this.maxReconnectDelay);
-      this.reconnectAttempt++;
-      console.log(`P2P WebSocket disconnected. Reconnecting in ${Math.round(delay / 1000)}s...`);
+      onNewQuake(data);
 
       setTimeout(() => {
-        if (!this.isIntentionalDisconnect && this.p2pWs === ws) {
-          this.connectWebSocket(onNewQuake, onEewReceived);
+        if (this.p2pQuakeData?.id === data.id) {
+          this.p2pQuakeData = null;
         }
-      }, delay);
-    };
+      }, 3 * 60 * 1000);
+    } else if (data.code === 556) {
+      const maxScaleFrom = Math.max(...(data.areas?.map((a: any) => a.scaleFrom) || [0]));
+
+      const mappedEew = {
+        Title: '緊急地震速報 (P2P)',
+        Issue: { Status: '通常' },
+        AnnouncedTime: data.time,
+        OriginTime: data.earthquake?.originTime,
+        Hypocenter: data.earthquake?.hypocenter?.name || '不明',
+        Latitude: data.earthquake?.hypocenter?.latitude || 0,
+        Longitude: data.earthquake?.hypocenter?.longitude || 0,
+        Depth: data.earthquake?.hypocenter?.depth || 0,
+        Magunitude: data.earthquake?.hypocenter?.magnitude || 0,
+        MaxIntensity: scaleToJmaString(maxScaleFrom),
+        isWarn: false,
+        isCancel: false
+      };
+
+      onEewReceived(mappedEew);
+    }
   }
 
   disconnect() {
-    this.isIntentionalDisconnect = true;
-    if (this.p2pWs) {
-      this.p2pWs.close();
-      this.p2pWs = null;
-    }
+    this.wsHandle?.disconnect();
+    this.wsHandle = null;
   }
 }
 

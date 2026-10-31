@@ -1,4 +1,13 @@
 import type { EEWMessage } from './models';
+import { JMA_LEVELS } from './jma-utils';
+
+// 진도 코드 → JMA 표기 ('5弱' 등) — 단일 테이블(JMA_LEVELS) 기반, 하위 호환용 재수출
+export function scaleToJmaString(scale: number): string {
+  for (let i = JMA_LEVELS.length - 1; i >= 0; i--) {
+    if (scale >= JMA_LEVELS[i].scale) return JMA_LEVELS[i].short;
+  }
+  return '0';
+}
 
 export function parseJSTTime(str: any): number {
   if (!str) return 0;
@@ -69,19 +78,6 @@ export function isUnknownQuake(item: any): boolean {
   const isUnknownMag = mag === -1 || mag === undefined || mag === 0;
 
   return isUnknownName || isUnknownMag || issueType === 'ScalePrompt';
-}
-
-export function scaleToJmaString(scale: number): string {
-  if (scale >= 60) return '7';
-  if (scale >= 55) return '6強';
-  if (scale >= 50) return '6弱';
-  if (scale >= 46) return '5強';
-  if (scale >= 45) return '5弱';
-  if (scale >= 40) return '4';
-  if (scale >= 30) return '3';
-  if (scale >= 20) return '2';
-  if (scale >= 10) return '1';
-  return '0';
 }
 
 export function buildMockEew(): EEWMessage {

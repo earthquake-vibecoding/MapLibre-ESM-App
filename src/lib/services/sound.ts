@@ -1,5 +1,6 @@
 import { playIntensitySound } from '../chime';
 import { playShindoSample, playDetectionSample } from '../sound-samples';
+import { jindoToScale } from '../jma-utils';
 
 export class SoundService {
   private audioCtx: AudioContext | null = null;
@@ -17,26 +18,29 @@ export class SoundService {
       }
 
       const unlockAudio = () => {
-        if (this.isUnlocked) return;
         const ctx = this.getAudioContext();
-        if (ctx) {
-          if (ctx.state === 'suspended') {
-            ctx.resume().then(() => {
-              this.isUnlocked = true;
-              this.removeUnlockListeners(unlockAudio);
-            }).catch(() => undefined);
-          } else if (ctx.state === 'running') {
+        if (!ctx) {
+          // AudioContext 자체가 없는 환경 — 재시도 무의미, 리스너 정리
+          this.removeUnlockListeners(unlockAudio);
+          return;
+        }
+        if (this.isUnlocked) return;
+        if (ctx.state === 'suspended') {
+          ctx.resume().then(() => {
             this.isUnlocked = true;
             this.removeUnlockListeners(unlockAudio);
-          }
-
-          // Play a silent buffer to fully unlock iOS Safari
-          const buffer = ctx.createBuffer(1, 1, 22050);
-          const source = ctx.createBufferSource();
-          source.buffer = buffer;
-          source.connect(ctx.destination);
-          source.start(0);
+          }).catch(() => undefined);
+        } else if (ctx.state === 'running') {
+          this.isUnlocked = true;
+          this.removeUnlockListeners(unlockAudio);
         }
+
+        // Play a silent buffer to fully unlock iOS Safari
+        const buffer = ctx.createBuffer(1, 1, 22050);
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        source.start(0);
 
         if (this.shindoAudio) {
           this.shindoAudio.load();
@@ -126,20 +130,19 @@ export class SoundService {
     }
   }
 
-  playSyntheticShindoSound(): void {
-    this.playIntensity(5);
-  }
-
   playDetectionSound(intensity: number | string): void {
     this.playIntensity(intensity);
   }
 
-  /** 흔들림 감지 비프 (shi0 샘플, 실패 시 신스) */
-  playShakeDetected(): void {
-    if (playDetectionSample()) return;
+  /** 흔들림 감지: shi0 비프 + 계급 상승 시 진도 알림음(shi1~7) 겹쳐 재생. 샘플 실패 시 신스 폴백 */
+  playShakeDetected(jindo?: number): void {
+    const scale = jindo !== undefined && jindo >= 0.5 ? jindoToScale(jindo) : 0;
+    let played = playDetectionSample();
+    if (scale > 0 && playShindoSample(scale)) played = true;
+    if (played) return;
     const ctx = this.getAudioContext();
     if (!ctx) return;
-    playIntensitySound(ctx, 1);
+    playIntensitySound(ctx, scale > 0 ? scale : 1);
   }
 }
 
