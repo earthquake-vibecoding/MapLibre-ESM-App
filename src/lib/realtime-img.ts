@@ -72,7 +72,7 @@ function processRealtimeImage(time: string, host: RealtimeHost): void {
     const result = processFrame(imageData, canvas.width, canvas.height, geojson.features, host.stationsState);
 
     if (result.soundJindo > -3) {
-      soundService.playDetectionSound(result.soundJindo);
+      soundService.playShakeDetected();
       notificationService.notifyShakingDetection(getJindoString(result.soundJindo) || String(result.soundJindo));
     }
 

@@ -1,4 +1,5 @@
 import { playIntensitySound } from '../chime';
+import { playShindoSample, playDetectionSample } from '../sound-samples';
 
 export class SoundService {
   private audioCtx: AudioContext | null = null;
@@ -69,6 +70,8 @@ export class SoundService {
   }
 
   playIntensity(scale: number | string | undefined): void {
+    // 실제 샘플(shi0-6) 우선, 사용 불가 시 신스 폴백
+    if (playShindoSample(scale)) return;
     const ctx = this.getAudioContext();
     if (!ctx) return;
     playIntensitySound(ctx, scale);
@@ -129,6 +132,14 @@ export class SoundService {
 
   playDetectionSound(intensity: number | string): void {
     this.playIntensity(intensity);
+  }
+
+  /** 흔들림 감지 비프 (shi0 샘플, 실패 시 신스) */
+  playShakeDetected(): void {
+    if (playDetectionSample()) return;
+    const ctx = this.getAudioContext();
+    if (!ctx) return;
+    playIntensitySound(ctx, 1);
   }
 }
 

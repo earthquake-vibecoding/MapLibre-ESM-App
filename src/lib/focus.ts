@@ -1,5 +1,4 @@
 import type { MapController } from './map-controller';
-import { MAP_CENTER } from './map-style';
 
 export function focusActiveGrids(mapCtl: MapController | null, stationsState: Map<string, any>): boolean {
   if (!mapCtl) return false;
@@ -55,11 +54,48 @@ export function focusOnEew(mapCtl: MapController | null, eew: any): void {
   }
 }
 
+/** 지진 탭 진입/이력 선택 시: 색칠된 진도 분포(진도 1 회색 포함) 전체가 화면에 들어오도록 자동 확대 */
 export function focusOnEarthquake(
   mapCtl: MapController | null,
   item: any,
   areaForecastGeoJSON: any
 ): void {
+  if (!mapCtl) return;
+  if (areaForecastGeoJSON?.features) {
+    let minLon = 180, maxLon = -180, minLat = 90, maxLat = -90;
+    const checkCoords = (coords: any) => {
+      if (typeof coords[0] === 'number') {
+        const [lon, lat] = coords;
+        if (lon < minLon) minLon = lon;
+        if (lon > maxLon) maxLon = lon;
+        if (lat < minLat) minLat = lat;
+        if (lat > maxLat) maxLat = lat;
+      } else if (Array.isArray(coords)) {
+        for (const c of coords) checkCoords(c);
+      }
+    };
+    for (const f of areaForecastGeoJSON.features) {
+      // color !== 'transparent' 인 영역 = 진도 1(회색) 이상 전부
+      if (f.properties?.color && f.properties.color !== 'transparent') {
+        const geom = f.geometry;
+        if (geom?.coordinates) checkCoords(geom.coordinates);
+      }
+    }
+    if (minLon < maxLon && minLat < maxLat) {
+      mapCtl.fitBounds([[minLon, minLat], [maxLon, maxLat]], {
+        padding: 80,
+        maxZoom: 8,
+        duration: 1200
+      });
+      return;
+    }
+  }
+  // 색칠 영역이 없으면 전체 뷰로 복귀
+  mapCtl.fitFullView(1000);
+}
+
+/** 진앙지 이동 버튼 전용: 진원지로 플라이 */
+export function focusOnEpicenter(mapCtl: MapController | null, item: any): void {
   if (!mapCtl || !item) return;
   const hyp = item?.earthquake?.hypocenter;
   const isValidHyp = hyp && typeof hyp.latitude === 'number' && typeof hyp.longitude === 'number' &&
@@ -73,45 +109,7 @@ export function focusOnEarthquake(
       speed: 1.2,
       duration: 1200
     });
-    return;
+  } else {
+    mapCtl.fitFullView(1000);
   }
-
-  if (areaForecastGeoJSON?.features) {
-    let minLon = 180, maxLon = -180, minLat = 90, maxLat = -90;
-    let hasValidColor = false;
-    for (const f of areaForecastGeoJSON.features) {
-      if (f.properties?.color && f.properties.color !== 'transparent') {
-        const geom = f.geometry;
-        if (geom && geom.coordinates) {
-          const checkCoords = (coords: any) => {
-            if (typeof coords[0] === 'number') {
-              const [lon, lat] = coords;
-              if (lon < minLon) minLon = lon;
-              if (lon > maxLon) maxLon = lon;
-              if (lat < minLat) minLat = lat;
-              if (lat > maxLat) maxLat = lat;
-              hasValidColor = true;
-            } else if (Array.isArray(coords)) {
-              for (const c of coords) checkCoords(c);
-            }
-          };
-          checkCoords(geom.coordinates);
-        }
-      }
-    }
-    if (hasValidColor && minLon < maxLon && minLat < maxLat) {
-      mapCtl.fitBounds([[minLon, minLat], [maxLon, maxLat]], {
-        padding: 80,
-        maxZoom: 8,
-        duration: 1200
-      });
-      return;
-    }
-  }
-
-  mapCtl.flyTo({
-    center: MAP_CENTER,
-    zoom: 5.2,
-    duration: 1000
-  });
 }

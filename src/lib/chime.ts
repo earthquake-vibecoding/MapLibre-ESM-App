@@ -1,7 +1,9 @@
 /**
  * 진도 1~7(5弱/5強, 6弱/6強 포함)별 알림음 합성.
- * 기본음 + 2차 오버톤 배음의 유기적 종소리 + 서브 베이스.
+ * 방송 two-tone 차임 + 언ison 디튠 + 컨볼루션 리버브 마스터 체인.
  */
+
+import { createMasterChain } from './audio-reverb';
 
 export function parseScale(scale: number | string | undefined): number {
   if (scale === undefined || scale === null) return 3;
@@ -31,44 +33,43 @@ export function parseScale(scale: number | string | undefined): number {
   return 3;
 }
 
-type ChimeFn = (freq: number, startTime: number, duration: number, vol: number, pan?: number) => void;
+type ToneFn = (freq: number, startTime: number, duration: number, vol: number, pan?: number) => void;
 
 export function playIntensitySound(ctx: AudioContext, scale: number | string | undefined): void {
   const normalized = parseScale(scale);
   const now = ctx.currentTime;
 
-  // 마스터 게인 및 고주파 차단 필터 (자극적인 쏘는 소리 제거)
-  const masterGain = ctx.createGain();
+  // 리버브+컴프레서 마스터 체인 (공간감)
+  const masterGain = createMasterChain(ctx, 0.38);
   const lowpass = ctx.createBiquadFilter();
   lowpass.type = 'lowpass';
-  lowpass.frequency.setValueAtTime(normalized >= 6 ? 4200 : 3200, now);
+  lowpass.frequency.setValueAtTime(normalized >= 5.5 ? 5000 : 3800, now);
+  lowpass.connect(masterGain);
 
-  masterGain.connect(lowpass);
-  lowpass.connect(ctx.destination);
-
-  // 부드러운 유기적 종소리 톤 (기본음 + 2차 오버톤 배음 조합)
-  const playOrganicChime: ChimeFn = (freq, startTime, duration, vol, pan = 0) => {
-    const osc1 = ctx.createOscillator();
-    const osc2 = ctx.createOscillator();
+  // 두 박 차임 기본 톤: 디튠 유니슨 2개 + 2.76배 배음(종 울림 근사)
+  const tone: ToneFn = (freq, startTime, duration, vol, pan = 0) => {
+    const oscA = ctx.createOscillator();
+    const oscB = ctx.createOscillator();
+    const harmonic = ctx.createOscillator();
     const gainNode = ctx.createGain();
+    const harmGain = ctx.createGain();
 
-    osc1.type = 'sine';
-    osc1.frequency.setValueAtTime(freq, startTime);
+    oscA.type = 'sine';
+    oscA.frequency.setValueAtTime(freq, startTime);
+    oscB.type = 'sine';
+    oscB.frequency.setValueAtTime(freq * 1.0025, startTime); // 유니슨 디튠 = 폭/온기
+    harmonic.type = 'sine';
+    harmonic.frequency.setValueAtTime(freq * 2.76, startTime);
+    harmGain.gain.value = 0.12;
 
-    osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(freq * 2, startTime); // 2차 배음
-
-    // 아날로그 스타일 엠벨롭 (클릭음 없는 부드러운 어택 + 자연스러운 감쇄)
     gainNode.gain.setValueAtTime(0, startTime);
-    gainNode.gain.linearRampToValueAtTime(vol, startTime + 0.025);
+    gainNode.gain.linearRampToValueAtTime(vol, startTime + 0.008);
     gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
 
-    osc1.connect(gainNode);
-
-    const harmonicGain = ctx.createGain();
-    harmonicGain.gain.value = 0.2; // 2차 배음은 20% 볼륨으로 온기 추가
-    osc2.connect(harmonicGain);
-    harmonicGain.connect(gainNode);
+    oscA.connect(gainNode);
+    oscB.connect(gainNode);
+    harmonic.connect(harmGain);
+    harmGain.connect(gainNode);
 
     if ('createStereoPanner' in ctx) {
       const panner = ctx.createStereoPanner();
@@ -79,122 +80,103 @@ export function playIntensitySound(ctx: AudioContext, scale: number | string | u
       gainNode.connect(masterGain);
     }
 
-    osc1.start(startTime);
-    osc2.start(startTime);
-    osc1.stop(startTime + duration + 0.05);
-    osc2.stop(startTime + duration + 0.05);
+    oscA.start(startTime);
+    oscB.start(startTime);
+    harmonic.start(startTime);
+    oscA.stop(startTime + duration + 0.05);
+    oscB.stop(startTime + duration + 0.05);
+    harmonic.stop(startTime + duration + 0.05);
   };
 
-  // 깊이감을 더하는 서브 베이스 톤
-  const playSubBass = (freq, startTime, duration, vol) => {
-    const subOsc = ctx.createOscillator();
-    const subGain = ctx.createGain();
-    subOsc.type = 'sine';
-    subOsc.frequency.setValueAtTime(freq, startTime);
+  // 저음 서브: 강한 진도일수록 깊은 울림
+  const thump = (freq: number, startTime: number, duration: number, vol: number) => {
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, startTime);
+    gainNode.gain.setValueAtTime(0, startTime);
+    gainNode.gain.linearRampToValueAtTime(vol, startTime + 0.03);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+    osc.connect(gainNode);
+    gainNode.connect(masterGain);
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.05);
+  };
 
-    subGain.gain.setValueAtTime(0, startTime);
-    subGain.gain.linearRampToValueAtTime(vol, startTime + 0.05);
-    subGain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
-
-    subOsc.connect(subGain);
-    subGain.connect(masterGain);
-
-    subOsc.start(startTime);
-    subOsc.stop(startTime + duration + 0.05);
+  // 반복 두 박 패턴: [고음, 저음] 쌍을 reps번 반복
+  const twoTone = (high: number, low: number, reps: number, interval: number, vol: number) => {
+    for (let i = 0; i < reps; i++) {
+      const t = now + i * interval;
+      const pan = i % 2 === 0 ? -0.15 : 0.15;
+      tone(high, t, 0.55, vol, pan);
+      tone(low, t + 0.09, 0.7, vol * 0.85, -pan);
+    }
   };
 
   switch (normalized) {
     case 1:
-      // 진도 1: 아주 미세하고 부드러운 단일 크리스탈 핑 (C5)
-      playOrganicChime(523.25, now, 0.7, 0.18, 0);
+      // 진도 1: 은은한 단일 핑
+      tone(783.99, now, 0.5, 0.15);
       break;
 
     case 2:
-      // 진도 2: 은은하고 따뜻한 2연속 멜로디 (D5 -> A5)
-      playOrganicChime(587.33, now, 0.7, 0.22, -0.2);
-      playOrganicChime(880.00, now + 0.12, 0.8, 0.22, 0.2);
+      // 진도 2: 부드러운 두 백 (E5 -> G5)
+      tone(659.25, now, 0.5, 0.18, -0.1);
+      tone(783.99, now + 0.14, 0.6, 0.18, 0.1);
       break;
 
     case 3:
-      // 진도 3: 경쾌한 3음 상향 화음 (C5 -> E5 -> G5)
-      playOrganicChime(523.25, now, 0.8, 0.25, -0.3);
-      playOrganicChime(659.25, now + 0.1, 0.9, 0.25, 0);
-      playOrganicChime(783.99, now + 0.2, 1.1, 0.28, 0.3);
+      // 진도 3: 밝은 상승 세 백 (C5 -> E5 -> G5)
+      tone(523.25, now, 0.45, 0.2, -0.15);
+      tone(659.25, now + 0.12, 0.5, 0.2, 0);
+      tone(783.99, now + 0.24, 0.65, 0.22, 0.15);
       break;
 
     case 4:
-      // 진도 4: 풍부한 4성부 따뜻한 벨 알림음 (F4 - A4 - C5 - F5)
-      playOrganicChime(349.23, now, 1.0, 0.20, -0.2);
-      playOrganicChime(440.00, now + 0.08, 1.1, 0.25, 0.2);
-      playOrganicChime(523.25, now + 0.16, 1.2, 0.28, -0.1);
-      playOrganicChime(698.46, now + 0.24, 1.4, 0.32, 0.1);
+      // 진도 4: 단정한 세 백 + 낮은 울림 (A4 -> C#5 -> E5, A2 서브)
+      thump(110.0, now, 1.2, 0.12);
+      tone(440.00, now, 0.5, 0.22, -0.15);
+      tone(554.37, now + 0.13, 0.55, 0.22, 0.15);
+      tone(659.25, now + 0.26, 0.8, 0.24, 0);
       break;
 
     case 5:
-      // 진도 5弱 (5-): 주의 환기 4음 화음 + 은은한 베이스 울림 (A4 -> C#5 -> E5 -> A5)
-      playSubBass(110.0, now, 1.5, 0.18);
-      playOrganicChime(440.00, now, 0.9, 0.28, -0.3);
-      playOrganicChime(554.37, now + 0.1, 1.0, 0.30, 0.1);
-      playOrganicChime(659.25, now + 0.2, 1.2, 0.32, -0.1);
-      playOrganicChime(880.00, now + 0.3, 1.4, 0.35, 0.3);
+      // 진도 5弱: 두 박 차임 2회 반복
+      thump(110.0, now, 1.6, 0.16);
+      twoTone(659.25, 880.00, 2, 0.45, 0.24);
       break;
 
     case 5.5:
-      // 진도 5強 (5+): 2연타 더블 차임 경보 (E4 -> G#4 -> B4 -> E5)
-      playSubBass(82.41, now, 1.8, 0.22);
-      [0, 0.22].forEach((offset) => {
-        playOrganicChime(329.63, now + offset, 1.0, 0.28, -0.2);
-        playOrganicChime(415.30, now + offset + 0.06, 1.1, 0.30, 0.2);
-        playOrganicChime(493.88, now + offset + 0.12, 1.2, 0.32, -0.1);
-        playOrganicChime(659.25, now + offset + 0.18, 1.4, 0.35, 0.1);
-      });
+      // 진도 5強: 두 박 차임 3회 반복, 더 낮은 서브
+      thump(87.31, now, 1.8, 0.2);
+      twoTone(587.33, 783.99, 3, 0.42, 0.26);
       break;
 
     case 6:
-      // 진도 6弱 (6-): 울림이 깊은 2회 반복 중강도 경보 (D3 베이스 + D4/F#4/A4/D5)
-      playSubBass(73.42, now, 2.2, 0.28);
-      [0, 0.28].forEach((offset) => {
-        playOrganicChime(293.66, now + offset, 1.1, 0.32, -0.3);
-        playOrganicChime(369.99, now + offset + 0.07, 1.2, 0.34, 0.3);
-        playOrganicChime(440.00, now + offset + 0.14, 1.3, 0.36, -0.1);
-        playOrganicChime(587.33, now + offset + 0.21, 1.5, 0.40, 0.1);
-      });
+      // 진도 6弱: 3회 반복 + 무거운 서브 (D)
+      thump(73.42, now, 2.2, 0.26);
+      twoTone(523.25, 698.46, 3, 0.4, 0.28);
       break;
 
     case 6.5:
-      // 진도 6強 (6+): 3연타 입체적 대형 경보 (C#3 베이스 + C#4/F#4/G#4/C#5 카스케이드)
-      playSubBass(68.73, now, 2.5, 0.32);
-      [0, 0.25, 0.50].forEach((offset, idx) => {
-        const pan = idx % 2 === 0 ? -0.3 : 0.3;
-        playOrganicChime(277.18, now + offset, 1.2, 0.35, pan);
-        playOrganicChime(369.99, now + offset + 0.06, 1.3, 0.36, -pan);
-        playOrganicChime(415.30, now + offset + 0.12, 1.4, 0.38, pan);
-        playOrganicChime(554.37, now + offset + 0.18, 1.6, 0.42, 0);
-      });
+      // 진도 6強: 4회 반복 + 깊은 서브 (C)
+      thump(65.41, now, 2.5, 0.3);
+      twoTone(466.16, 622.25, 4, 0.38, 0.3);
       break;
 
-    case 7:
-      // 진도 7: 웅장한 차임 퐁 + 잔향 카스케이드 (C2 서브 곤 + C4/G4/C5/E5/G5)
-      playSubBass(65.41, now, 3.0, 0.38);
-      // 1차 메인 카스케이드
-      playOrganicChime(261.63, now, 1.4, 0.35, -0.4);
-      playOrganicChime(392.00, now + 0.08, 1.5, 0.38, 0.2);
-      playOrganicChime(523.25, now + 0.16, 1.6, 0.40, -0.2);
-      playOrganicChime(659.25, now + 0.24, 1.8, 0.43, 0.4);
-      playOrganicChime(783.99, now + 0.32, 2.0, 0.46, 0);
-
-      // 2차 잔향 웨이브
-      setTimeout(() => {
-        const now2 = ctx.currentTime;
-        playOrganicChime(261.63, now2, 1.4, 0.32, 0.3);
-        playOrganicChime(392.00, now2 + 0.08, 1.5, 0.35, -0.3);
-        playOrganicChime(523.25, now2 + 0.16, 1.6, 0.38, 0.1);
-        playOrganicChime(783.99, now2 + 0.24, 2.0, 0.42, 0);
-      }, 450);
+    case 7: {
+      // 진도 7: 긴급 4회 반복 + 상승 마무리 + 깊은 서브
+      thump(65.41, now, 3.0, 0.34);
+      twoTone(415.30, 554.37, 4, 0.36, 0.32);
+      const tEnd = now + 4 * 0.36 + 0.1;
+      tone(554.37, tEnd, 0.5, 0.3);
+      tone(622.25, tEnd + 0.12, 0.6, 0.3);
+      tone(830.61, tEnd + 0.24, 1.2, 0.34);
       break;
+    }
 
     default:
-      playOrganicChime(523.25, now, 0.8, 0.25, 0);
+      tone(523.25, now, 0.6, 0.2);
       break;
   }
 }

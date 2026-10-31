@@ -7,11 +7,9 @@ import type { Ticker } from './ticker';
 import { buildDetectedFeatures, loadDetectedEvents, saveDetectedEvents } from './grid';
 import { applyAreaIntensity } from './area-intensity';
 import { buildEpicenterFeatures, buildMockEew, isActiveEEW } from './quake-utils';
-import { focusActiveGrids, focusOnEarthquake, focusOnEew } from './focus';
-import { updateMaskLayer } from './est-shindo';
+import { focusActiveGrids, focusOnEarthquake, focusOnEew, focusOnEpicenter } from './focus';import { updateMaskLayer } from './est-shindo';
 import { soundService } from './services/sound';
 import { notificationService } from './services/notification.svelte';
-import { MAP_CENTER, MAP_ZOOM } from './map-style';
 
 export class AppController {
   mapCtl: MapController | null = null;
@@ -96,7 +94,7 @@ export class AppController {
     this.updateVisibility();
     if (tab === 'est_shindo_region') {
       this.updateEstShindoMask();
-      this.mapCtl?.flyTo({ center: MAP_CENTER, zoom: MAP_ZOOM, pitch: 0, bearing: 0, duration: 1000 });
+      this.mapCtl?.fitFullView(1000);
     } else if (tab === 'earthquake') {
       if (!p2pQuakeService.selectedQuake && p2pQuakeService.p2pHistoryList.length > 0) {
         p2pQuakeService.selectedQuake = p2pQuakeService.p2pHistoryList[0];
@@ -108,7 +106,7 @@ export class AppController {
         focusOnEarthquake(this.mapCtl, quake, this.areaData?.areaForecastGeoJSON);
       }
     } else if (tab === 'realtime') {
-      this.mapCtl?.flyTo({ center: MAP_CENTER, zoom: MAP_ZOOM, pitch: 0, bearing: 0, duration: 1000 });
+      this.mapCtl?.fitFullView(1000);
     }
   }
 
@@ -118,6 +116,11 @@ export class AppController {
     this.updateEpicenter(item);
     this.updateAreaIntensity(item);
     focusOnEarthquake(this.mapCtl, item, this.areaData?.areaForecastGeoJSON);
+  }
+
+  /** 진앙지 이동 버튼: 선택 지진의 진원지로 플라이 */
+  focusEpicenter(item: any): void {
+    focusOnEpicenter(this.mapCtl, item);
   }
 
   loadMoreHistory(): void {
@@ -171,7 +174,7 @@ export class AppController {
   }
 
   resetMapView(): void {
-    this.mapCtl?.flyTo({ center: MAP_CENTER, zoom: MAP_ZOOM, pitch: 0, bearing: 0, duration: 800 });
+    this.mapCtl?.fitFullView(800);
     ui.isCleanMode = true;
   }
 

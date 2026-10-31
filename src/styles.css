@@ -1,6 +1,7 @@
 /* Global styles */
 @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
-@import "tailwindcss";
+/* 스캔 범위를 src/로 제한 — 루트의 대형 JSON까지 스캔해서 빌드가 26초 걸리는 것 방지 */
+@import "tailwindcss" source("./");
 
 /* 다크모드를 ui.isDarkMode 토글(.dark 클래스)과 통일 — 시스템 설정과 무관하게 클래스 기반으로 동작 */
 @custom-variant dark (&:where(.dark, .dark *));

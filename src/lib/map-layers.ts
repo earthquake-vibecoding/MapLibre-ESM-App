@@ -104,28 +104,16 @@ export function mapLayers(): any[] {
         'line-width': 3
       }
     },
-    // 진원지 레이어 (최상단)
-    {
-      id: 'p2p-epicenter-halo',
-      type: 'circle',
-      source: 'p2p-epicenter',
-      paint: {
-        'circle-radius': 18,
-        'circle-color': '#dc2626',
-        'circle-opacity': 0.45,
-        'circle-stroke-width': 2,
-        'circle-stroke-color': '#ffffff'
-      }
-    },
+    // 진원지 레이어 (최상단) — 런타임에 addImage로 등록한 X 아이콘 사용
     {
       id: 'p2p-epicenter-layer',
-      type: 'circle',
+      type: 'symbol',
       source: 'p2p-epicenter',
-      paint: {
-        'circle-radius': 7,
-        'circle-color': '#ef4444',
-        'circle-stroke-width': 2.5,
-        'circle-stroke-color': '#ffffff'
+      layout: {
+        'icon-image': 'epicenter-x',
+        'icon-size': ['interpolate', ['linear'], ['zoom'], 4, 0.6, 8, 1.1],
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true
       }
     },
     // 관측소 개별 진도 점 레이어

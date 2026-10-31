@@ -1,4 +1,4 @@
-import { baseStyle, geoSources, MAP_CENTER, MAP_ZOOM } from './map-style';
+import { baseStyle, geoSources, JAPAN_MAIN_BOUNDS, MAP_CENTER, MAP_ZOOM } from './map-style';
 import { mapLayers } from './map-layers';
 import { bindStationPopups, createStationHighlightMarker, type StationLocation } from './map-marker';
 
@@ -17,7 +17,13 @@ export class MapController {
   private Marker: any;
   private initialData = new Map<string, any>();
   private stationMarker: any = null;
+  private alive = true;
   readonly ready: Promise<void>;
+
+  /** destroy 후 늦게 도착하는 비동기 콜백(img.onload 등)이 죽은 맵을 만지지 않게 하는 공용 가드 */
+  private live(): boolean {
+    return this.alive && !!this.map.style;
+  }
 
   constructor(map: any, Popup: any, Marker: any) {
     this.map = map;
@@ -37,6 +43,29 @@ export class MapController {
           map.addLayer(layer);
         }
         bindStationPopups(map, Popup);
+        // 진원지 X 아이콘 등록 (고해상도 캔버스 → 확대해도 계단 현상 없음)
+        const size = 96;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          const drawX = (color: string, w: number) => {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = w;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(18, 18);
+            ctx.lineTo(size - 18, size - 18);
+            ctx.moveTo(size - 18, 18);
+            ctx.lineTo(18, size - 18);
+            ctx.stroke();
+          };
+          drawX('#ffffff', 30);
+          drawX('#ef4444', 18);
+          map.addImage('epicenter-x', ctx.getImageData(0, 0, size, size), { pixelRatio: 4 });
+        }
+        map.fitBounds(JAPAN_MAIN_BOUNDS, { padding: 48, pitch: 0, bearing: 0, duration: 0 });
         resolve();
       });
     });
@@ -47,6 +76,7 @@ export class MapController {
   }
 
   setSource(id: string, data: any): void {
+    if (!this.live()) return;
     const source = this.map.getSource(id);
     if (source) source.setData(data);
   }
@@ -113,8 +143,8 @@ export class MapController {
 
     // 진원지 마커: 지진정보 탭이거나 EEW/추정진원 활성 시 항상 표시
     const epiVis = isEarthquakeTab || s.eewActive || s.estEpi !== null;
-    for (const id of ['p2p-epicenter-halo', 'p2p-epicenter-layer']) {
-      if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', vis(epiVis));
+    if (map.getLayer('p2p-epicenter-layer')) {
+      map.setLayoutProperty('p2p-epicenter-layer', 'visibility', vis(epiVis));
     }
 
     // 관측소 개별 진도 점: 지진 정보 탭 + (stations/both 모드)
@@ -125,6 +155,7 @@ export class MapController {
   }
 
   setWavePaint(pFade: number, sFade: number): void {
+    if (!this.live()) return;
     if (this.map.getLayer('p-wave-fill-layer')) {
       this.map.setPaintProperty('p-wave-fill-layer', 'fill-opacity', 0.12 * pFade);
       this.map.setPaintProperty('p-wave-layer', 'line-opacity', 0.85 * pFade);
@@ -136,17 +167,30 @@ export class MapController {
   }
 
   blinkDetected(visible: boolean): void {
+    if (!this.live()) return;
     if (this.map.getLayer('detected-layer')) {
       this.map.setPaintProperty('detected-layer', 'line-opacity', visible ? 1 : 0.2);
     }
   }
 
   flyTo(opts: any): void {
+    if (!this.live()) return;
     this.map.flyTo(opts);
   }
 
   fitBounds(bounds: [[number, number], [number, number]], opts: any = {}): void {
+    if (!this.live()) return;
     this.map.fitBounds(bounds, opts);
+  }
+
+  /** 전체 보기: 일본 본토(오키나와 제외)에 맞춰 프레임 고정 */
+  fitFullView(duration = 800): void {
+    this.map.fitBounds(JAPAN_MAIN_BOUNDS, {
+      padding: 48,
+      pitch: 0,
+      bearing: 0,
+      duration
+    });
   }
 
   removeStationMarker(): void {
@@ -170,6 +214,7 @@ export class MapController {
   }
 
   destroy(): void {
+    this.alive = false;
     this.removeStationMarker();
     this.map.remove();
   }

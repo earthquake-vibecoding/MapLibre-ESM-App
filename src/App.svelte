@@ -99,7 +99,7 @@
     <QuakeDetailPanel
       quake={p2pQuakeService.selectedQuake}
       stationMap={ui.stationMap}
-      onFocusEpicenter={(item) => app.selectQuakeFromHistory(item)}
+      onFocusEpicenter={(item) => app.focusEpicenter(item)}
       onFocusStation={(st) => app.onFocusStation(st)}
     />
   {/if}
@@ -134,15 +134,15 @@
     <button
       onclick={() => app.exitCleanMode()}
       title="전체 지도 모드 종료"
-      class="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2 rounded-xl backdrop-blur-md border border-white/10 bg-zinc-950/85 text-zinc-300 text-xs font-bold shadow-lg hover:text-white hover:bg-zinc-800/90 cursor-pointer animate-overlay-in">
-      ⤡ 전체 지도 보기 중 — 클릭 또는 ESC로 복귀
+      class="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2 rounded-lg border border-zinc-700 bg-zinc-900 text-zinc-300 text-xs font-bold hover:text-white hover:bg-zinc-800 cursor-pointer animate-overlay-in">
+      전체 지도 보기 중 — 클릭 또는 ESC로 복귀
     </button>
   {:else if ui.hasDetectedGrids}
     <button
       onclick={() => app.focusOnDetectedGrid()}
       title="감지된 흔들림 격자로 이동"
-      class="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 px-4 py-2 rounded-xl font-bold text-xs sm:text-sm shadow-lg cursor-pointer transition-all bg-emerald-600 border border-emerald-400 text-white shadow-emerald-900/40 animate-pulse animate-overlay-in">
-      🎯 흔들림 감지 — 격자로 이동
+      class="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 px-4 py-2 rounded-lg font-bold text-xs sm:text-sm cursor-pointer transition-colors bg-emerald-600 border border-emerald-500 text-white hover:bg-emerald-500 animate-pulse animate-overlay-in">
+      흔들림 감지 — 격자로 이동
     </button>
   {/if}
 </div>

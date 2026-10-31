@@ -67,23 +67,32 @@ export class P2pQuakeService {
     onEewReceived: (mappedEew: any) => void
   ) {
     if (typeof WebSocket === 'undefined') return;
+    // 재접속 시 이전 소켓 잔존 방지
+    const old = this.p2pWs;
+    if (old) {
+      this.p2pWs = null;
+      try {
+        old.onclose = null;
+        old.onerror = null;
+        old.close();
+      } catch {
+        // ignore
+      }
+    }
     this.isIntentionalDisconnect = false;
-    this.p2pWs = new WebSocket('wss://api.p2pquake.net/v2/ws');
+    const ws = new WebSocket('wss://api.p2pquake.net/v2/ws');
+    this.p2pWs = ws;
 
-    this.p2pWs.onopen = () => {
+    ws.onopen = () => {
       this.reconnectAttempt = 0;
       console.log('P2P WebSocket connected successfully');
     };
 
-    this.p2pWs.onerror = (err) => {
-      console.warn('P2P WebSocket error occurred:', err);
-      if (this.p2pWs) {
-        this.p2pWs.close();
-      }
+    ws.onerror = () => {
+      console.warn('P2P WebSocket error occurred');
     };
 
-    this.p2pWs.onmessage = (event: MessageEvent) => {
-      try {
+    ws.onmessage = (event: MessageEvent) => {      try {
         const data = JSON.parse(event.data);
         if (data.code === 551) {
           this.p2pQuakeData = data;
@@ -129,25 +138,18 @@ export class P2pQuakeService {
       }
     };
 
-    this.p2pWs.onclose = () => {
-      if (!this.isIntentionalDisconnect) {
-        const delay = Math.min(5000 * Math.pow(1.5, this.reconnectAttempt), this.maxReconnectDelay);
-        this.reconnectAttempt++;
-        console.log(`P2P WebSocket disconnected. Reconnecting in ${Math.round(delay / 1000)}s...`);
+    ws.onclose = () => {
+      // 재접속은 setTimeout 사용: 백그라운드 탭에서 rAF가 멈춰도 재접속이 유지되도록
+      if (this.p2pWs !== ws || this.isIntentionalDisconnect) return;
+      const delay = Math.min(5000 * Math.pow(1.5, this.reconnectAttempt), this.maxReconnectDelay);
+      this.reconnectAttempt++;
+      console.log(`P2P WebSocket disconnected. Reconnecting in ${Math.round(delay / 1000)}s...`);
 
-        const reconnectTime = Date.now() + delay;
-        const checkReconnect = () => {
-          if (this.isIntentionalDisconnect) return;
-          if (Date.now() >= reconnectTime) {
-            this.connectWebSocket(onNewQuake, onEewReceived);
-          } else if (typeof window !== 'undefined') {
-            requestAnimationFrame(checkReconnect);
-          }
-        };
-        if (typeof window !== 'undefined') {
-          requestAnimationFrame(checkReconnect);
+      setTimeout(() => {
+        if (!this.isIntentionalDisconnect && this.p2pWs === ws) {
+          this.connectWebSocket(onNewQuake, onEewReceived);
         }
-      }
+      }, delay);
     };
   }
 

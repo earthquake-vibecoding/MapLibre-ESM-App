@@ -9,11 +9,23 @@ export class WolfxEewService {
 
   connectWebSocket(onEewUpdate?: (eew: EEWMessage) => void) {
     if (typeof WebSocket === 'undefined') return;
+    // 재접속 시 이전 소켓 잔존 방지
+    const old = this.wolfxWs;
+    if (old) {
+      this.wolfxWs = null;
+      try {
+        old.onclose = null;
+        old.close();
+      } catch {
+        // ignore
+      }
+    }
     this.isIntentionalDisconnect = false;
     try {
-      this.wolfxWs = new WebSocket('wss://ws-api.wolfx.jp/jma_eew');
+      const ws = new WebSocket('wss://ws-api.wolfx.jp/jma_eew');
+      this.wolfxWs = ws;
 
-      this.wolfxWs.onmessage = (event: MessageEvent) => {
+      ws.onmessage = (event: MessageEvent) => {
         try {
           const data = JSON.parse(event.data);
           if (data && (data.type === 'jma_eew' || data.Title || data.Hypocenter || data.CodeType === 'EEW')) {
@@ -48,24 +60,17 @@ export class WolfxEewService {
         }
       };
 
-      this.wolfxWs.onclose = () => {
-        if (!this.isIntentionalDisconnect) {
-          const reconnectTime = Date.now() + 5000;
-          const checkReconnect = () => {
-            if (this.isIntentionalDisconnect) return;
-            if (Date.now() >= reconnectTime) {
-              this.connectWebSocket(onEewUpdate);
-            } else if (typeof window !== 'undefined') {
-              requestAnimationFrame(checkReconnect);
-            }
-          };
-          if (typeof window !== 'undefined') {
-            requestAnimationFrame(checkReconnect);
+      ws.onclose = () => {
+        // 재접속은 setTimeout 사용: 백그라운드 탭에서 rAF가 멈춰도 재접속이 유지되도록
+        if (this.wolfxWs !== ws || this.isIntentionalDisconnect) return;
+        setTimeout(() => {
+          if (!this.isIntentionalDisconnect) {
+            this.connectWebSocket(onEewUpdate);
           }
-        }
+        }, 5000);
       };
 
-      this.wolfxWs.onerror = () => {
+      ws.onerror = () => {
         // Silently handle error; onclose will handle reconnection automatically
       };
     } catch (e) {
