@@ -56,18 +56,21 @@ export class MapController {
   }
 
   setTheme(dark: boolean): void {
-    const map = this.map;
-    map.setPaintProperty('background', 'background-color', dark ? '#18181b' : '#ffffff');
-    map.setPaintProperty('world-fill', 'fill-color', dark ? '#27272a' : '#e4e4e7');
-    map.setPaintProperty('world-outline', 'line-color', dark ? '#3f3f46' : '#a1a1aa');
-    map.setPaintProperty('japan-fill', 'fill-color', dark ? '#27272a' : '#e4e4e7');
-    map.setPaintProperty('japan-outline', 'line-color', dark ? '#3f3f46' : '#a1a1aa');
-    if (map.getLayer('area-forecast-line')) {
-      map.setPaintProperty('area-forecast-line', 'line-color', dark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.15)');
-    }
-    if (map.getLayer('est-shindo-mask-line')) {
-      map.setPaintProperty('est-shindo-mask-line', 'line-color', dark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.15)');
-    }
+    // 스타일 로드 전 호출 시 'Style is not done loading' 에러가 나므로 load 이후로 지연
+    this.ready.then(() => {
+      const map = this.map;
+      map.setPaintProperty('background', 'background-color', dark ? '#18181b' : '#ffffff');
+      map.setPaintProperty('world-fill', 'fill-color', dark ? '#27272a' : '#e4e4e7');
+      map.setPaintProperty('world-outline', 'line-color', dark ? '#3f3f46' : '#a1a1aa');
+      map.setPaintProperty('japan-fill', 'fill-color', dark ? '#27272a' : '#e4e4e7');
+      map.setPaintProperty('japan-outline', 'line-color', dark ? '#3f3f46' : '#a1a1aa');
+      if (map.getLayer('area-forecast-line')) {
+        map.setPaintProperty('area-forecast-line', 'line-color', dark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.15)');
+      }
+      if (map.getLayer('est-shindo-mask-line')) {
+        map.setPaintProperty('est-shindo-mask-line', 'line-color', dark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.15)');
+      }
+    });
   }
 
   applyVisibility(s: VisState): void {

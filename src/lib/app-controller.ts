@@ -79,13 +79,9 @@ export class AppController {
   }
 
   applySavedDetectedEvents(): void {
-    const { restored, restoredCount } = loadDetectedEvents(this.stationsState);
+    const { restored } = loadDetectedEvents(this.stationsState);
     if (!restored) return;
     this.updateDetectedEvents();
-    if (restoredCount > 0) {
-      focusActiveGrids(this.mapCtl, this.stationsState);
-      requestAnimationFrame(() => focusActiveGrids(this.mapCtl, this.stationsState));
-    }
   }
 
   updateEstShindoMask(): void {
@@ -100,7 +96,7 @@ export class AppController {
     this.updateVisibility();
     if (tab === 'est_shindo_region') {
       this.updateEstShindoMask();
-      this.mapCtl?.flyTo({ center: MAP_CENTER, zoom: 5.2, pitch: 0, bearing: 0, duration: 1000 });
+      this.mapCtl?.flyTo({ center: MAP_CENTER, zoom: MAP_ZOOM, pitch: 0, bearing: 0, duration: 1000 });
     } else if (tab === 'earthquake') {
       if (!p2pQuakeService.selectedQuake && p2pQuakeService.p2pHistoryList.length > 0) {
         p2pQuakeService.selectedQuake = p2pQuakeService.p2pHistoryList[0];
@@ -112,7 +108,7 @@ export class AppController {
         focusOnEarthquake(this.mapCtl, quake, this.areaData?.areaForecastGeoJSON);
       }
     } else if (tab === 'realtime') {
-      this.mapCtl?.flyTo({ center: MAP_CENTER, zoom: 4.8, pitch: 0, bearing: 0, duration: 1000 });
+      this.mapCtl?.flyTo({ center: MAP_CENTER, zoom: MAP_ZOOM, pitch: 0, bearing: 0, duration: 1000 });
     }
   }
 
@@ -175,7 +171,7 @@ export class AppController {
   }
 
   resetMapView(): void {
-    this.mapCtl?.flyTo({ center: MAP_CENTER, zoom: MAP_ZOOM, duration: 800 });
+    this.mapCtl?.flyTo({ center: MAP_CENTER, zoom: MAP_ZOOM, pitch: 0, bearing: 0, duration: 800 });
     ui.isCleanMode = true;
   }
 
