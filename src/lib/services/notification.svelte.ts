@@ -1,4 +1,5 @@
 import { scaleToJmaString } from '../quake-utils';
+import { TIMING } from '../config';
 
 export class NotificationService {
   permission = $state<NotificationPermission>('default');
@@ -138,7 +139,7 @@ export class NotificationService {
   // 3. 흔들림 감지 (Shaking Detection) 알림 — 감지 프레임마다 호출되므로 60초 레이트리밋 (도배 방지)
   notifyShakingDetection(intensity: number | string, _locationCount?: number): void {
     const now = Date.now();
-    if (now - this.lastShakingNotify < 60000) return;
+    if (now - this.lastShakingNotify < TIMING.notifyGapMs) return;
     this.lastShakingNotify = now;
 
     const title = `⚡ 실시간 지진 흔들림 감지`;

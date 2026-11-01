@@ -1,5 +1,6 @@
 import type { EEWMessage } from './models';
 import { JMA_LEVELS } from './jma-utils';
+import { TIMING } from './config';
 
 // 진도 코드 → JMA 표기 ('5弱' 등) — 단일 테이블(JMA_LEVELS) 기반, 하위 호환용 재수출
 export function scaleToJmaString(scale: number): string {
@@ -39,6 +40,14 @@ export function parseJSTTime(str: any): number {
   return 0;
 }
 
+/** EEW 진원 좌표 유효성 — 누락/0/일본 밖 좌표 거부 (마커 표시와 지도 이동이 공용) */
+export function isEewCoordValid(eew: any): boolean {
+  return !!eew && typeof eew.Longitude === 'number' && typeof eew.Latitude === 'number'
+    && eew.Longitude !== 0 && eew.Latitude !== 0
+    && eew.Longitude >= 120 && eew.Longitude <= 155
+    && eew.Latitude >= 20 && eew.Latitude <= 55;
+}
+
 export function isActiveEEW(eew: any): boolean {
   if (!eew) return false;
   if (eew.isCancel) return false;
@@ -54,7 +63,7 @@ export function isActiveEEW(eew: any): boolean {
   if (!origin) return false;
   const elapsedSeconds = (Date.now() - origin) / 1000;
 
-  return elapsedSeconds >= -60 && elapsedSeconds < 240;
+  return elapsedSeconds >= -TIMING.eewFutureAllowS && elapsedSeconds < TIMING.eewActiveWindowS;
 }
 
 export function getQuakeUniqueKey(item: any): string {
@@ -125,8 +134,7 @@ export interface EpicenterDeps {
 export function buildEpicenterFeatures({ eew, tab, estEpi, quake }: EpicenterDeps): any[] {
   const features: any[] = [];
 
-  if (eew && isActiveEEW(eew) && typeof eew.Longitude === 'number' && typeof eew.Latitude === 'number'
-    && eew.Longitude !== 0 && eew.Latitude !== 0) {
+  if (eew && isActiveEEW(eew) && isEewCoordValid(eew)) {
     features.push({
       type: 'Feature',
       geometry: { type: 'Point', coordinates: [eew.Longitude, eew.Latitude] },

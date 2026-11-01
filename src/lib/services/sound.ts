@@ -2,6 +2,7 @@ import { playIntensitySound } from '../chime';
 import { playShindoSample, playDetectionSample, shindoSampleIndex } from '../sound-samples';
 import { jindoToScale } from '../jma-utils';
 import { dbg } from '../debug';
+import { ALERT, DETECT, TIMING } from '../config';
 
 export class SoundService {
   private audioCtx: AudioContext | null = null;
@@ -14,7 +15,7 @@ export class SoundService {
       try {
         this.shindoAudio = new Audio('/Shindo.wav');
         this.shindoAudio.preload = 'auto';
-        this.shindoAudio.volume = 0.85;
+        this.shindoAudio.volume = ALERT.shindoVolume;
       } catch {
         // ignore
       }
@@ -115,7 +116,7 @@ export class SoundService {
     if (typeof window === 'undefined') return;
 
     const now = Date.now();
-    if (now - this.lastShindoPlayTime < 1500 && this.lastShindoScale === scale) {
+    if (now - this.lastShindoPlayTime < TIMING.shindoSoundGapMs && this.lastShindoScale === scale) {
       return;
     }
     this.lastShindoPlayTime = now;
@@ -124,7 +125,7 @@ export class SoundService {
     try {
       const audio = this.shindoAudio || new Audio('/Shindo.wav');
       audio.currentTime = 0;
-      audio.volume = 0.85;
+      audio.volume = ALERT.shindoVolume;
       const playPromise = audio.play();
 
       let scaleSoundTriggered = false;
@@ -165,9 +166,9 @@ export class SoundService {
 
   /** 흔들림 감지: shi0 비프(15초 쓰로틀 — 감지 프레임마다 호출되므로 도배 방지) + 계급 상승 시 진도 알림음(shi1~7) 겹침 */
   playShakeDetected(jindo?: number): void {
-    const scale = jindo !== undefined && jindo >= 0.5 ? jindoToScale(jindo) : 0;
+    const scale = jindo !== undefined && jindo >= DETECT.displayJindoMin ? jindoToScale(jindo) : 0;
     const now = Date.now();
-    const beepAllowed = now - this.lastDetectBeep > 15000;
+    const beepAllowed = now - this.lastDetectBeep > TIMING.detectBeepGapMs;
     let played = false;
     if (beepAllowed) {
       played = playDetectionSample();

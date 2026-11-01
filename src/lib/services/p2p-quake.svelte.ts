@@ -1,6 +1,7 @@
 import type { P2PQuakeItem } from '../models';
 import { scaleToJmaString } from '../quake-utils';
 import { connectWithRetry, type WsRetryHandle } from './ws-connect';
+import { TIMING } from '../config';
 
 export class P2pQuakeService {
   p2pQuakeData = $state<P2PQuakeItem | null>(null);
@@ -92,7 +93,7 @@ export class P2pQuakeService {
         if (this.p2pQuakeData?.id === data.id) {
           this.p2pQuakeData = null;
         }
-      }, 3 * 60 * 1000);
+      }, TIMING.p2pKeepMs);
     } else if (data.code === 556) {
       const maxScaleFrom = Math.max(...(data.areas?.map((a: any) => a.scaleFrom) || [0]));
 

@@ -1,10 +1,12 @@
 import { applyMedianFilter } from './noise-filter';
 import { getJindoFromColor } from './jma-utils';
+import { DETECT } from './config';
+import { updateEventMax } from './detect-levels';
 
-/** 관측소별 진도 추이 링버퍼 — StationPanel 스파크라인용 (최근 60프레임 ≈ 1분) */
+/** 관측소별 진도 추이 링버퍼 — StationPanel 스파크라인용 */
 function pushHistory(stn: any, t: number, j: number | null): void {
   stn.history.push({ t, j });
-  if (stn.history.length > 60) stn.history.shift();
+  if (stn.history.length > DETECT.historyFrames) stn.history.shift();
 }
 
 export interface DetectResult {
@@ -12,16 +14,6 @@ export interface DetectResult {
   detectedUpdated: boolean;
   newEventCenter: [number, number] | null;
   soundJindo: number;
-}
-
-// Qiita logic: Weaker(1), Weak(2), Medium(3), Strong(4), Stronger(5)
-function getLevel(jindo: number | null): number {
-  if (jindo === null) return 0;
-  if (jindo < -1.0) return 1;
-  if (jindo < 1.0) return 2;
-  if (jindo < 3.0) return 3;
-  if (jindo < 4.5) return 4;
-  return 5;
 }
 
 export function processFrame(
@@ -74,7 +66,7 @@ export function processFrame(
             }
             stn.jindo = filteredJindo;
             stn.delta.unshift(delta);
-            if (stn.delta.length > 10) stn.delta.pop();
+            if (stn.delta.length > DETECT.deltaWindow) stn.delta.pop();
 
             stn.deltaSum = stn.delta.reduce((acc: number, val: number) => acc + val, 0);
             pushHistory(stn, frameTime, filteredJindo);
@@ -82,6 +74,7 @@ export function processFrame(
             stn.jindo = null;
             stn.delta = [];
             stn.deltaSum = 0;
+            stn.rawJindoHistory = []; // 미디언 버퍼도 리셋 — 투명 프레임 후 옛 값이 끼지 않게
             pushHistory(stn, frameTime, null);
           }
         }
@@ -99,11 +92,12 @@ export function processFrame(
   for (const stn of stations) {
     // 이상치 필터링: 흔들림 감지 중이 아님 & 최근 데이터 있음 & 10초간 변화량 0.8 미만 & 진도 3(도서는 5약) 이상
     const isIsland = stn.near.length === 0;
-    const isAnomaly = !stn.event && stn.deltaSum < 0.8 && stn.jindo !== null && stn.jindo >= (isIsland ? 4.5 : 3.0);
+    const isAnomaly = !stn.event && stn.deltaSum < DETECT.neighborRise && stn.jindo !== null
+      && stn.jindo >= (isIsland ? DETECT.anomalyJindoIsland : DETECT.anomalyJindo);
 
     if (isAnomaly) continue;
 
-    if (stn.deltaSum > 1.2) {
+    if (stn.deltaSum > DETECT.riseThreshold) {
       const u = stn.near;
       let targetEvent = stn.event;
 
@@ -113,27 +107,29 @@ export function processFrame(
         if (neighborWithEvent) {
           targetEvent = neighborWithEvent.event;
         } else {
-          // 주변 관측점도 상승했는지 확인 (임계값 0.8)
+          // 주변 관측점도 상승했는지 확인
           let rCount = 0;
           for (const neighbor of u) {
-            if (neighbor.deltaSum > 0.8) rCount++;
+            if (neighbor.deltaSum > DETECT.neighborRise) rCount++;
           }
 
           // 도서지역 강진 예외
-          const isIslandAndStrong = isIsland && stn.jindo !== null && stn.jindo >= 4.2;
+          const isIslandAndStrong = isIsland && stn.jindo !== null && stn.jindo >= DETECT.islandStrongJindo;
 
-          // 주변 관측점 확인 (비율 60% 이상 및 조건 충족)
+          // 주변 관측점 확인 (비율 + 최소 개수)
           const neighborRatio = u.length > 0 ? (rCount / u.length) : 0;
-          const hasEnoughNeighbors = u.length > 0 && (rCount >= 2 || rCount === u.length) && neighborRatio >= 0.6;
+          const hasEnoughNeighbors = u.length > 0 && (rCount >= DETECT.neighborMinCount || rCount === u.length)
+            && neighborRatio >= DETECT.neighborMinRatio;
 
-          // 최소 진도 기준 (-0.5 이상)
-          const isFelt = stn.jindo !== null && stn.jindo >= -0.5;
+          // 최소 진도 기준
+          const isFelt = stn.jindo !== null && stn.jindo >= DETECT.feltJindo;
 
           if (isFelt && (isIslandAndStrong || hasEnoughNeighbors)) {
             targetEvent = {
               id: Math.random(),
               startTime: nowTick,
-              maxLevel: 0
+              maxLevel: 0,
+              maxJindo: stn.jindo
             };
             newEventDetected = true;
             detectedCenter = stn.lonlat;
@@ -149,30 +145,14 @@ export function processFrame(
 
       if (targetEvent) {
         stn.event = targetEvent;
-
-        const currentLevel = getLevel(stn.jindo);
-        if (currentLevel > targetEvent.maxLevel) {
-          targetEvent.maxLevel = currentLevel;
-          if (stn.jindo !== null && stn.jindo > soundJindoToPlay) {
-            soundJindoToPlay = stn.jindo;
-          }
-        }
-
-        // 검출 종료 시간 갱신 (진도에 따라 유동적으로 연장)
-        stn.expireTime = Date.now() + 10000;
+        soundJindoToPlay = updateEventMax(targetEvent, stn.jindo, soundJindoToPlay);
+        stn.expireTime = Date.now() + DETECT.expireMs;
         detectedUpdated = true;
       }
-    } else if (stn.event && stn.jindo !== null && stn.jindo >= -0.5) {
+    } else if (stn.event && stn.jindo !== null && stn.jindo >= DETECT.sustainJindo) {
       // 감지된 이벤트가 존재하고 흔들림이 지속되는 경우 격자 유지
-      const currentLevel = getLevel(stn.jindo);
-      if (currentLevel > stn.event.maxLevel) {
-        stn.event.maxLevel = currentLevel;
-        if (stn.jindo !== null && stn.jindo > soundJindoToPlay) {
-          soundJindoToPlay = stn.jindo;
-        }
-      }
-
-      stn.expireTime = Date.now() + 10000;
+      soundJindoToPlay = updateEventMax(stn.event, stn.jindo, soundJindoToPlay);
+      stn.expireTime = Date.now() + DETECT.expireMs;
       detectedUpdated = true;
     }
   }

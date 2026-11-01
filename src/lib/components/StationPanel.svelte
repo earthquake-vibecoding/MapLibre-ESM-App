@@ -2,7 +2,16 @@
   import { ui } from '../state.svelte';
   import { app } from '../app-controller';
   import { getIntensityColor, getJindoString, jindoToScale } from '../jma-utils';
-  import { loadFavorites, saveFavorites } from '../station-favorites';
+  import { loadFavorites, saveFavorites, FAVORITES_KEY } from '../station-favorites';
+  import { VIEW, DETECT, TIMING } from '../config';
+  import Sparkline from './Sparkline.svelte';
+
+  interface Props {
+    /** overlay: 메인 지도 위 플로팅 / window: 외부 미니 창 전체 (프레임리스 드래그) */
+    mode?: 'overlay' | 'window';
+  }
+  let { mode = 'overlay' }: Props = $props();
+  const isWindow = $derived(mode === 'window');
 
   // 진도→gal 환산 (JMA 계측진도 I ↔ PGA 역관계): PGA[gal] ≈ 10^((I+0.9)/2.95) — 참고치
   const jindoToGal = (j: number): number => Math.round(Math.pow(10, (j + 0.9) / 2.95));
@@ -21,15 +30,28 @@
     saveFavorites(favs);
   }
 
-  const stn = $derived(app.stationsState.get(ui.stationPanelCode ?? ''));
+  // 다른 창(Electron)에서 즐겨찾기 변경 시 동기화 — storage 이벤트는 쓴 창 자신에는 안 옴
+  $effect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === FAVORITES_KEY) favs = loadFavorites();
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  });
+
+  const stn = $derived.by(() => {
+    void ui.stationsLoaded; // 비반응성 Map — 로드 완료 후 재조회
+    return app.stationsState.get(ui.stationPanelCode ?? '');
+  });
   const isFav = $derived(!!ui.stationPanelCode && favs.includes(ui.stationPanelCode));
   const scale = $derived(snap?.jindo != null ? jindoToScale(snap.jindo) : 0);
-  const badgeColor = $derived(snap?.jindo != null && snap.jindo >= 0.5 ? getIntensityColor(scale) : '#71717a');
+  const badgeColor = $derived(snap?.jindo != null && snap.jindo >= DETECT.displayJindoMin ? getIntensityColor(scale) : '#71717a');
   const gal = $derived(snap?.jindo != null ? jindoToGal(snap.jindo) : null);
 
-  // 검색: 이름/지역/코드 부분일치 (stationsState는 비반응성 Map — 열 때 1회 스냅)
+  // 검색: 이름/지역/코드 부분일치 (stationsState는 비반응성 Map — 로드 완료 플래그에 반응해 스냅)
   let allStations = $state<any[]>([]);
   $effect(() => {
+    void ui.stationsLoaded;
     allStations = Array.from(app.stationsState.values());
   });
   const results = $derived.by(() => {
@@ -50,49 +72,50 @@
     snap = stn ? { jindo: stn.jindo, deltaSum: stn.deltaSum, event: stn.event, hist: [...stn.history] } : null;
   }
   $effect(() => {
-    const id = setInterval(tick, 500);
+    const id = setInterval(tick, TIMING.panelSnapMs);
     return () => clearInterval(id);
   });
 
   function pick(s: any): void {
     ui.stationPanelCode = s.code;
     query = '';
-    app.mapCtl?.flyTo({ center: s.lonlat, zoom: 7, duration: 800 });
+    snap = null; // 이전 관측소 스냅샷이 최대 500ms 남아 보이는 것 방지
+    if (isWindow) {
+      // $state 프록시는 IPC structured clone 불가 — 평객체 스냅샷으로 전송
+      window.quakeBridge?.panel?.flyTo($state.snapshot(s.lonlat));
+      // 메인 창 선택 동기화 — 릴레이 대상이 이 관측소로 바뀜
+      window.quakeBridge?.panel?.select(s.code);
+      return;
+    }
+    app.mapCtl?.flyTo({ center: s.lonlat, ...VIEW.stationFly });
   }
 
-  // 스파크라인: 세로 30px 영역, 진도 [-1, hi] 자동 스케일
-  const sparkPoints = $derived.by(() => {
-    const hist = snap?.hist ?? [];
-    const pts = hist.filter((p) => p.j != null) as { t: number; j: number }[];
-    if (pts.length < 2) return null;
-    const hi = Math.max(1.5, ...pts.map((p) => p.j)) + 0.5;
-    const lo = -1;
-    const y = (v: number) => 32 - ((v - lo) / (hi - lo)) * 28;
-    const x = (i: number) => (i / (pts.length - 1)) * 100;
-    return {
-      line: pts.map((p, i) => `${x(i).toFixed(1)},${y(p.j).toFixed(1)}`).join(' '),
-      last: pts[pts.length - 1],
-      lastX: x(pts.length - 1),
-      lastY: y(pts[pts.length - 1].j),
-      zeroY: y(0)
-    };
-  });
+  function close(): void {
+    if (isWindow) window.quakeBridge?.panel?.close();
+    else ui.stationPanelCode = null;
+  }
 </script>
 
-<div class="absolute bottom-14 right-3 z-30 w-80 max-w-[calc(100vw-1.5rem)] rounded-lg border border-zinc-200 bg-white shadow-xl dark:border-zinc-700 dark:bg-zinc-900 flex flex-col animate-overlay-in">
-  <!-- 헤더 -->
-  <div class="flex items-center gap-1.5 px-3 py-2 border-b border-zinc-200 dark:border-zinc-700">
-    <span class="font-bold text-sm truncate flex-1">📍 {stn?.region || ''} {stn?.name || '관측소'}</span>
+<div
+  class="flex flex-col rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900 {isWindow
+    ? 'w-full h-full overflow-hidden'
+    : 'absolute bottom-14 right-3 z-30 w-80 max-w-[calc(100vw-1.5rem)] shadow-xl animate-overlay-in'}"
+>
+  <!-- 헤더 (window 모드: 제목표시줄 대용 드래그 영역) -->
+  <div class="flex items-center gap-1.5 px-3 py-2 border-b border-zinc-200 dark:border-zinc-700" style={isWindow ? '-webkit-app-region: drag' : ''}>
+    <span class="font-bold text-sm truncate flex-1">📍 {stn?.region || ''} {stn?.name || (isWindow ? '관측소 선택…' : '관측소')}</span>
     <button
       type="button"
       onclick={toggleFav}
+      style={isWindow ? '-webkit-app-region: no-drag' : ''}
       aria-label={isFav ? '즐겨찾기 해제' : '즐겨찾기 추가'}
       class="p-1 rounded-md cursor-pointer transition-colors {isFav ? 'text-amber-400 hover:text-amber-300' : 'text-zinc-300 hover:text-amber-400 dark:text-zinc-600 dark:hover:text-amber-400'}">
       {'★'}
     </button>
     <button
       type="button"
-      onclick={() => (ui.stationPanelCode = null)}
+      onclick={close}
+      style={isWindow ? '-webkit-app-region: no-drag' : ''}
       aria-label="관측소 패널 닫기"
       class="p-1 rounded-md text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer text-sm font-bold w-6">✕</button>
   </div>
@@ -100,7 +123,7 @@
   <!-- 현재 상태 -->
   <div class="px-3 py-2.5 flex items-center gap-2 border-b border-zinc-200 dark:border-zinc-700">
     <span class="rounded px-2 py-1 text-xs font-black text-white" style="background-color: {badgeColor}">
-      진도 {snap?.jindo != null && snap.jindo >= 0.5 ? getJindoString(snap.jindo) : '0'}
+      진도 {snap?.jindo != null && snap.jindo >= DETECT.displayJindoMin ? getJindoString(jindoToScale(snap.jindo)) : '0'}
     </span>
     {#if gal !== null}
       <span class="text-[11px] text-zinc-500 dark:text-zinc-400">≈ {gal} gal</span>
@@ -123,12 +146,8 @@
   <!-- 스파크라인 -->
   <div class="px-3 py-2 border-b border-zinc-200 dark:border-zinc-700">
     <div class="text-[10px] font-bold text-zinc-400 mb-1">최근 60초 계측진도</div>
-    {#if sparkPoints}
-      <svg viewBox="0 0 100 34" preserveAspectRatio="none" class="w-full h-20 block rounded bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-100 dark:border-zinc-800">
-        <line x1="0" y1={sparkPoints.zeroY} x2="100" y2={sparkPoints.zeroY} stroke="currentColor" class="text-zinc-200 dark:text-zinc-700" stroke-width="1" vector-effect="non-scaling-stroke" stroke-dasharray="3 3" />
-        <polyline points={sparkPoints.line} fill="none" stroke={badgeColor} stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linejoin="round" />
-        <circle cx={sparkPoints.lastX} cy={sparkPoints.lastY} r="2.5" fill={badgeColor} vector-effect="non-scaling-stroke" />
-      </svg>
+    {#if snap?.hist}
+      <Sparkline hist={snap.hist} color={badgeColor} />
     {:else}
       <div class="h-20 flex items-center justify-center text-[11px] text-zinc-400 bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-100 dark:border-zinc-800 rounded">
         {snap ? '데이터 수집 중…' : '관측소 데이터 없음'}

@@ -5,6 +5,7 @@ import { soundService } from './services/sound';
 import { ui } from './state.svelte';
 import { getQuakeUniqueKey } from './quake-utils';
 import { focusOnEarthquake } from './focus';
+import { TIMING } from './config';
 import type { AppController } from './app-controller';
 
 let lastSeenQuakeId: string | null = null;
@@ -52,16 +53,17 @@ function handleEew(c: AppController, mappedEew: any): void {
 
   wolfxEewService.eewData = mappedEew;
   wolfxEewService.isEewDismissed = false;
-  c.updateEpicenter();
-  c.updateAreaIntensity(mappedEew);
-  c.updateVisibility();
 
-  if (eewKey !== c.lastEewKey || (now - c.lastEewTime > 10000)) {
+  // 사운드/알림을 지도 갱신보다 먼저 — 맵 로드 전 EEW 수신 시 예외로 소리를 놓치지 않게
+  if (eewKey !== c.lastEewKey || (now - c.lastEewTime > TIMING.eewSoundGapMs)) {
     c.lastEewKey = eewKey;
     c.lastEewTime = now;
     soundService.playShindoAudio(mappedEew.MaxIntensity);
     notificationService.notifyEew(mappedEew);
   }
+  c.updateEpicenter();
+  c.updateAreaIntensity(mappedEew);
+  c.updateVisibility();
 }
 
 export async function startQuakeFeed(handlers: QuakeFeedHandlers): Promise<void> {
@@ -101,6 +103,6 @@ export async function startQuakeFeed(handlers: QuakeFeedHandlers): Promise<void>
           handlers.onNewQuake(newest);
         }
       }
-    }, 20000);
+    }, TIMING.quakePollMs);
   }
 }

@@ -1,4 +1,6 @@
 import type { MapController } from './map-controller';
+import { isEewCoordValid } from './quake-utils';
+import { VIEW } from './config';
 
 export function focusActiveGrids(mapCtl: MapController | null, stationsState: Map<string, any>): boolean {
   if (!mapCtl) return false;
@@ -28,8 +30,7 @@ export function focusActiveGrids(mapCtl: MapController | null, stationsState: Ma
   if (activeStations.length === 1 || (maxLon - minLon < 0.2 && maxLat - minLat < 0.2)) {
     mapCtl.flyTo({
       center: [totalLon / activeStations.length, totalLat / activeStations.length],
-      zoom: 6.2,
-      speed: 1.2
+      ...VIEW.clusterFly
     });
   } else {
     mapCtl.fitBounds([
@@ -45,11 +46,10 @@ export function focusActiveGrids(mapCtl: MapController | null, stationsState: Ma
 }
 
 export function focusOnEew(mapCtl: MapController | null, eew: any): void {
-  if (mapCtl && eew && typeof eew.Longitude === 'number' && typeof eew.Latitude === 'number') {
+  if (mapCtl && isEewCoordValid(eew)) {
     mapCtl.flyTo({
       center: [eew.Longitude, eew.Latitude],
-      zoom: 6.2,
-      speed: 1.2
+      ...VIEW.eewFly
     });
   }
 }
@@ -84,7 +84,7 @@ export function focusOnEarthquake(
     if (minLon < maxLon && minLat < maxLat) {
       mapCtl.fitBounds([[minLon, minLat], [maxLon, maxLat]], {
         padding: 80,
-        maxZoom: 8,
+        maxZoom: VIEW.fitMaxZoom,
         duration: 1200
       });
       return;
@@ -105,9 +105,7 @@ export function focusOnEpicenter(mapCtl: MapController | null, item: any): void 
   if (isValidHyp) {
     mapCtl.flyTo({
       center: [hyp.longitude, hyp.latitude],
-      zoom: 6.8,
-      speed: 1.2,
-      duration: 1200
+      ...VIEW.epicenterFly
     });
   } else {
     mapCtl.fitFullView(1000);

@@ -59,13 +59,36 @@ function validTime(req, res) {
   return time;
 }
 
+// 짧은 이미지 캐시 — 렌더러 1초 폴링마다 kmoni를 두드리지 않게 (지연 504 완화)
+const IMG_CACHE_MS = 1500;
+const imgCache = new Map(); // url -> { at, type, buf }
+
+function sendCached(res, url) {
+  const hit = imgCache.get(url);
+  if (!hit || Date.now() - hit.at >= IMG_CACHE_MS) return false;
+  res.setHeader('Content-Type', hit.type);
+  res.send(hit.buf);
+  return true;
+}
+
+function storeImage(url, type, buf) {
+  const now = Date.now();
+  for (const [k, v] of imgCache) {
+    if (now - v.at >= IMG_CACHE_MS) imgCache.delete(k);
+  }
+  if (imgCache.size >= 12) imgCache.delete(imgCache.keys().next().value);
+  imgCache.set(url, { at: now, type, buf });
+}
+
 async function sendImage(res, url, fallback) {
+  if (sendCached(res, url)) return;
   try {
     const response = await fetchWithTimeout(url);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const buffer = await response.arrayBuffer();
+    const buffer = Buffer.from(await response.arrayBuffer());
+    storeImage(url, 'image/gif', buffer);
     res.setHeader('Content-Type', 'image/gif');
-    res.send(Buffer.from(buffer));
+    res.send(buffer);
   } catch {
     if (fallback) {
       res.setHeader('Content-Type', 'image/gif');

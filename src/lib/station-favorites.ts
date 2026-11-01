@@ -1,5 +1,6 @@
-/** 즐겨찾은 관측소 코드 목록 (localStorage 'station_favorites') — StationPanel과 알림 필터가 공유 */
-const KEY = 'station_favorites';
+/** 즐겨찾은 관측소 코드 목록 (localStorage) — StationPanel과 알림 필터가 공유 */
+export const FAVORITES_KEY = 'station_favorites';
+const KEY = FAVORITES_KEY;
 
 export function loadFavorites(): string[] {
   try {

@@ -1,6 +1,7 @@
 import { JAPAN_MAIN_BOUNDS } from './map-style';
 import { bootMap, createMapControllerInstance } from './map-boot';
 import { createStationHighlightMarker, type StationLocation } from './map-marker';
+import { VIEW } from './config';
 
 export interface VisState {
   tab: 'realtime' | 'earthquake' | 'est_shindo_region';
@@ -45,10 +46,6 @@ export class MapController {
     if (source) source.setData(data);
   }
 
-  hasSource(id: string): boolean {
-    return !!this.map.getSource(id);
-  }
-
   setTheme(dark: boolean): void {
     // 스타일 로드 전 호출 시 'Style is not done loading' 에러가 나므로 load 이후로 지연
     this.ready.then(() => {
@@ -68,6 +65,14 @@ export class MapController {
   }
 
   applyVisibility(s: VisState): void {
+    // 스타일 로드 전 호출 시 getLayer가 던지므로 로드 이후로 지연
+    this.ready.then(() => {
+      if (!this.live()) return;
+      this.applyVisibilityNow(s);
+    });
+  }
+
+  private applyVisibilityNow(s: VisState): void {
     const map = this.map;
     const isEarthquakeTab = s.tab === 'earthquake';
     const isEstShindoTab = s.tab === 'est_shindo_region';
@@ -170,14 +175,14 @@ export class MapController {
   focusStation(st: StationLocation): void {
     this.flyTo({
       center: [st.lon, st.lat],
-      zoom: 10.5,
+      zoom: VIEW.focusStationZoom,
       speed: 1.2,
       essential: true
     });
 
     this.removeStationMarker();
     this.stationMarker = createStationHighlightMarker(this.map, this.Marker, st);
-    setTimeout(() => this.removeStationMarker(), 7000);
+    setTimeout(() => this.removeStationMarker(), VIEW.focusStationMarkerMs);
   }
 
   destroy(): void {

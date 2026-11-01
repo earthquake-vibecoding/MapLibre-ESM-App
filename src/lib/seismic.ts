@@ -1,4 +1,5 @@
 import { isActiveEEW, parseJSTTime } from './quake-utils';
+import { WAVE } from './config';
 
 export interface SeismicTable {
   [depth: string]: { distance: number; pTime: number; sTime: number }[];
@@ -118,7 +119,6 @@ export function computeWaveState(
   let elapsedSeconds = 0;
   let depth = 10;
   let center: [number, number] = [0, 0];
-  let maxSRadius = 500;
 
   if (eew.isSimulation) {
     elapsedSeconds = (now - (eew.simulationStartTime || now)) / 1000 + (eew.simulatedElapsed || 5);
@@ -129,10 +129,6 @@ export function computeWaveState(
   depth = (typeof eew.Depth === 'number' && eew.Depth > 0) ? eew.Depth : 10;
   center = [eew.Longitude || 0, eew.Latitude || 0];
   const mag = (typeof eew.Magunitude === 'number' && eew.Magunitude > 0) ? eew.Magunitude : 6.0;
-  if (mag < 4.5) maxSRadius = 300;
-  else if (mag < 6.0) maxSRadius = 450;
-  else if (mag < 7.0) maxSRadius = 600;
-  else maxSRadius = 750;
 
   if (elapsedSeconds <= 0) {
     return { active: true, pFc: EMPTY_FC, sFc: EMPTY_FC, pFade: 0, sFade: 0 };
@@ -147,12 +143,20 @@ export function computeWaveState(
   }
 
   if (!pRadius || pRadius <= 0) {
-    const pDistance = 6.5 * elapsedSeconds;
+    const pDistance = WAVE.fallbackPKmsPerS * elapsedSeconds;
     pRadius = pDistance > depth ? Math.sqrt(pDistance * pDistance - depth * depth) : pDistance;
   }
   if (!sRadius || sRadius <= 0) {
-    const sDistance = 3.5 * elapsedSeconds;
+    const sDistance = WAVE.fallbackSKmsPerS * elapsedSeconds;
     sRadius = sDistance > depth ? Math.sqrt(sDistance * sDistance - depth * depth) : sDistance;
+  }
+
+  let maxSRadius: number = WAVE.maxRadiusDefault;
+  for (const [magUnder, radius] of WAVE.maxRadiusByMag) {
+    if (mag < magUnder) {
+      maxSRadius = radius;
+      break;
+    }
   }
 
   const maxPRadius = maxSRadius * 1.25;

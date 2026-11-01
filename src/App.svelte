@@ -18,9 +18,20 @@
   import GifViewPanel from './lib/components/GifViewPanel.svelte';
   import Legend from './lib/components/Legend.svelte';
   import StationPanel from './lib/components/StationPanel.svelte';
+  import { isPanelMode, initPanelMode } from './lib/panel-mode';
+  import { setPanelRelay } from './lib/station-relay';
+  import { VIEW } from './lib/config';
 
   let mapEl: HTMLElement | undefined = $state();
   let showTools = $state(false);
+  let panelOpen = $state(false);
+  const hasPanelBridge = typeof window !== 'undefined' && !!window.quakeBridge?.panel;
+  const panelBridge = hasPanelBridge ? window.quakeBridge!.panel : undefined;
+
+  // 선택 관측소 → 패널 창 동기화 (지도 클릭/오버레이 닫기 모두, null 포함). 패널 창 자신은 이쪽으로 보내지 않음
+  $effect(() => {
+    if (!isPanelMode) panelBridge?.select(ui.stationPanelCode);
+  });
 
   const processedHistoryList = $derived(groupHistoryList(p2pQuakeService.p2pHistoryList, ui.groupUnknown));
   const showLegend = $derived(ui.activeTab !== 'realtime');
@@ -35,13 +46,37 @@
   }
 
   onMount(() => {
+    if (isPanelMode) {
+      initPanelMode();
+      return;
+    }
     if (mapEl) initApp(mapEl);
+    // 메인 창: 패널 창 개폐 → 릴레이 on/off + 버튼 상태, 패널의 flyTo 요청 → 지도 이동
+    panelBridge?.onState((open) => {
+      panelOpen = open;
+      setPanelRelay(open);
+    });
+    panelBridge?.isOpen().then((open) => {
+      panelOpen = open;
+      setPanelRelay(open);
+    });
+    panelBridge?.onFlyTo((lonlat) => app.mapCtl?.flyTo({ center: lonlat, ...VIEW.stationFly }));
+    // 패널 창에서 고른 관측소 → 메인 선택 갱신 (릴레이 대상 + 오버레이가 따라옴)
+    panelBridge?.onSelect((code) => {
+      ui.stationPanelCode = code;
+    });
     return () => destroyApp();
   });
 </script>
 
 <svelte:window onkeydown={onKeydown} />
 
+{#if isPanelMode}
+  <!-- 외부 미니 창: 패널만 렌더 -->
+  <div class="w-screen h-screen overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-100 relative">
+    <StationPanel mode="window" />
+  </div>
+{:else}
 <div class="relative w-full h-screen overflow-hidden bg-slate-50 text-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 transition-colors duration-300">
   <div bind:this={mapEl} class="w-full h-full"></div>
 
@@ -70,6 +105,8 @@
       onSetIntensityDisplayMode={(m) => app.setIntensityDisplayMode(m)}
       onSetRealtimeDataType={(t) => app.setRealtimeDataType(t)}
       onOpenTools={() => (showTools = true)}
+      stationPanelOpen={panelOpen}
+      onToggleStationPanel={hasPanelBridge ? () => window.quakeBridge!.panel!.toggle() : undefined}
     />
 
     {#if showLegend}
@@ -82,6 +119,7 @@
       hasDetectedGrids={ui.hasDetectedGrids}
       onTriggerEewSimulation={() => app.triggerEewSimulation()}
       onFocusDetectedGrid={() => app.focusOnDetectedGrid()}
+      onFlyToLog={(center) => app.mapCtl?.flyTo({ center, ...VIEW.stationFly })}
       onClose={() => (showTools = false)}
     />
   {/if}
@@ -151,3 +189,4 @@
     </button>
   {/if}
 </div>
+{/if}

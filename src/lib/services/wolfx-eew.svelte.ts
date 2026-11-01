@@ -1,5 +1,6 @@
 import type { EEWMessage } from '../models';
 import { connectWithRetry, type WsRetryHandle } from './ws-connect';
+import { TIMING } from '../config';
 
 export class WolfxEewService {
   eewData = $state<EEWMessage | null>(null);
@@ -37,7 +38,7 @@ export class WolfxEewService {
 
     // 시뮬레이션 진행 중에는 실제 수신으로 덮지 않음
     const current = this.eewData;
-    if (current && (current as any).isSimulation && Date.now() - ((current as any).simulationStartTime || 0) < 120000) return;
+    if (current && (current as any).isSimulation && Date.now() - ((current as any).simulationStartTime || 0) < TIMING.simGuardMs) return;
 
     this.eewData = mappedEew;
     this.isEewDismissed = false;

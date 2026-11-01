@@ -11,9 +11,12 @@
     onSetIntensityDisplayMode: (mode: IntensityDisplayMode) => void;
     onSetRealtimeDataType: (type: RealtimeDataType) => void;
     onOpenTools: () => void;
+    /** Electron에서만 전달 — 없으면 외부 패널 버튼 숨김 */
+    stationPanelOpen?: boolean;
+    onToggleStationPanel?: () => void;
   }
 
-  let { activeTab, showWaveRings, intensityDisplayMode, realtimeDataType, onResetMapView, onToggleWaveRings, onSetIntensityDisplayMode, onSetRealtimeDataType, onOpenTools }: Props = $props();
+  let { activeTab, showWaveRings, intensityDisplayMode, realtimeDataType, onResetMapView, onToggleWaveRings, onSetIntensityDisplayMode, onSetRealtimeDataType, onOpenTools, stationPanelOpen, onToggleStationPanel }: Props = $props();
 
   const iconBtn = 'w-8 h-8 rounded-md flex items-center justify-center transition-colors cursor-pointer text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800 ';
   const opt = (active: boolean) =>
@@ -39,6 +42,16 @@
   <button onclick={onOpenTools} title="도구 (시뮬레이션 / 알림음 테스트)" aria-label="도구" class={iconBtn}>
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
   </button>
+
+  {#if onToggleStationPanel}
+    <button
+      onclick={onToggleStationPanel}
+      title={stationPanelOpen ? '외부 관측소 패널 닫기' : '외부 관측소 패널 (항상 위)'}
+      aria-label={stationPanelOpen ? '외부 관측소 패널 닫기' : '외부 관측소 패널 열기'}
+      class={iconBtn + (stationPanelOpen ? 'bg-blue-600 text-white hover:bg-blue-600' : '')}>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 9V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4"/><rect width="10" height="7" x="12" y="13" rx="1"/></svg>
+    </button>
+  {/if}
 
   {#if activeTab === 'realtime'}
     <div class={divider}></div>

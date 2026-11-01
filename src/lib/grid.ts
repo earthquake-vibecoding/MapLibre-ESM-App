@@ -1,3 +1,5 @@
+import { GRID } from './config';
+
 /** 두 관측점 거리(km) — haversine */
 export function haversineKm(a: number[], b: number[]): number {
   const dLat = (b[1] - a[1]) * Math.PI / 180;
@@ -9,18 +11,20 @@ export function haversineKm(a: number[], b: number[]): number {
 }
 
 export function computeNeighbors(stnArray: any[]): void {
-  // 이웃 관측소 계산 (농어가/도서지역 대응 20km~30km 적응형)
+  // 이웃 관측소 계산 (농어가/도서지역 대응 — 근거리 확정 + 최소 개수 보장)
   for (let i = 0; i < stnArray.length; i++) {
     const nearDists: { stn: any; dist: number }[] = [];
     for (let j = 0; j < stnArray.length; j++) {
       if (i === j) continue;
       const dist = haversineKm(stnArray[i].lonlat, stnArray[j].lonlat);
-      if (dist <= 30) {
+      if (dist <= GRID.neighborFarKm) {
         nearDists.push({ stn: stnArray[j], dist });
       }
     }
     nearDists.sort((a, b) => a.dist - b.dist);
-    stnArray[i].near = nearDists.filter((item, idx) => item.dist <= 20 || idx < 3).map(item => item.stn);
+    stnArray[i].near = nearDists
+      .filter((item, idx) => item.dist <= GRID.neighborNearKm || idx < GRID.neighborMin)
+      .map(item => item.stn);
   }
 }
 
@@ -133,13 +137,13 @@ export function loadDetectedEvents(stationsState: Map<string, any>): { restored:
     }
 
     const elapsed = Date.now() - data.timestamp;
-    // 5분(300,000ms) 이내의 저장 데이터만 유효
-    if (elapsed > 300000) {
+    // 저장 데이터 유효 시간
+    if (elapsed > GRID.restoreValidMs) {
       localStorage.removeItem('eq_detected_stations');
       return { restored: false, restoredCount: 0 };
     }
 
-    const remainingTimeout = Math.max(3000, 15000 - elapsed);
+    const remainingTimeout = Math.min(GRID.restoreMaxMs, Math.max(GRID.restoreMinMs, GRID.restoreMaxMs - elapsed));
     let restoredAny = false;
     let restoredCount = 0;
 

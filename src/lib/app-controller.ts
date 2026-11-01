@@ -11,6 +11,7 @@ import { focusActiveGrids, focusOnEarthquake, focusOnEew, focusOnEpicenter } fro
 import { updateMaskLayer } from './est-shindo';
 import { soundService } from './services/sound';
 import { notificationService } from './services/notification.svelte';
+import { VIEW } from './config';
 
 export class AppController {
   mapCtl: MapController | null = null;
@@ -193,7 +194,7 @@ export class AppController {
     this.updateVisibility();
     soundService.playShindoAudio('5+');
     notificationService.notifyEew(mockEew);
-    this.mapCtl?.flyTo({ center: [140.0, 35.5], zoom: 6.8, speed: 1.2, duration: 1200 });
+    this.mapCtl?.flyTo({ center: [140.0, 35.5], ...VIEW.epicenterFly });
   }
 }
 

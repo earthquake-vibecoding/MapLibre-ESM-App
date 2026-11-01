@@ -59,6 +59,7 @@ export async function initApp(container: HTMLElement): Promise<void> {
   app.areaData = areaData;
   app.geojson = stationData.geojson;
   app.stationsState = stationData.stationsState;
+  ui.stationsLoaded = true;
 
   if (app.mapCtl) {
     app.mapCtl.setInitialData('points', app.geojson);

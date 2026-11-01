@@ -45,6 +45,7 @@ export const ui = $state({
   expandedGroupKeys: {} as Record<string, boolean>,
   historyOffset: 0,
   stationPanelCode: null as string | null, // StationPanel에서 보는 관측소
+  stationsLoaded: false, // app.stationsState가 비반응성 Map이라 로드 완료 알림용 플래그
   areaFilter: loadAlertFilter(), // 관심 지역 알림 필터
   stationMap: new Map<string, any>()
 });

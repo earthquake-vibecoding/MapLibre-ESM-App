@@ -1,15 +1,25 @@
 <script lang="ts">
   import SoundPreview from './SoundPreview.svelte';
   import AlertFilterSettings from './AlertFilterSettings.svelte';
+  import { getDetectionLog, clearDetectionLog } from '../detection-log';
+  import { getIntensityColor, getJindoString, jindoToScale } from '../jma-utils';
 
   interface Props {
     hasDetectedGrids: boolean;
     onTriggerEewSimulation: () => void;
     onFocusDetectedGrid: () => void;
+    onFlyToLog: (center: [number, number]) => void;
     onClose: () => void;
   }
 
-  let { hasDetectedGrids, onTriggerEewSimulation, onFocusDetectedGrid, onClose }: Props = $props();
+  let { hasDetectedGrids, onTriggerEewSimulation, onFocusDetectedGrid, onFlyToLog, onClose }: Props = $props();
+
+  // 모달을 열 때마다 새로 읽음 — 기록은 localStorage 최신순
+  let log = $state(getDetectionLog());
+
+  function fmtTime(t: number): string {
+    return new Date(t).toTimeString().slice(0, 8);
+  }
 
   let dialogEl: HTMLElement | undefined = $state();
 
@@ -51,6 +61,38 @@
           : 'bg-zinc-100 border-zinc-300 text-zinc-500 hover:bg-zinc-200 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-700')}>
         감지 격자로 이동
       </button>
+    </div>
+
+    <div class="pt-3 border-t border-zinc-200 dark:border-zinc-700">
+      <div class="flex items-center justify-between mb-1.5">
+        <span class="text-xs font-bold">감지 기록</span>
+        {#if log.length > 0}
+          <button
+            onclick={() => { clearDetectionLog(); log = []; }}
+            class="text-[10px] text-zinc-400 hover:text-red-500 cursor-pointer">지우기</button>
+        {/if}
+      </div>
+      {#if log.length === 0}
+        <p class="text-[11px] text-zinc-400">아직 기록된 감지가 없습니다</p>
+      {:else}
+        <ul class="max-h-40 overflow-y-auto custom-scrollbar flex flex-col gap-1">
+          {#each log as e (e.id)}
+            <li>
+              <button
+                type="button"
+                onclick={() => onFlyToLog(e.center)}
+                title="감지 중심으로 지도 이동"
+                class="w-full text-left px-2 py-1.5 rounded-md text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer flex items-center gap-2">
+                <span class="font-mono text-zinc-500 dark:text-zinc-400">{fmtTime(e.start)}</span>
+                <span class="font-bold" style="color: {getIntensityColor(jindoToScale(e.maxJindo))}">
+                  {getJindoString(jindoToScale(e.maxJindo))}
+                </span>
+                <span class="ml-auto text-[10px] text-zinc-400">{e.count}개소 · {Math.max(1, Math.round((e.end - e.start) / 1000))}s</span>
+              </button>
+            </li>
+          {/each}
+        </ul>
+      {/if}
     </div>
 
     <div class="pt-3 border-t border-zinc-200 dark:border-zinc-700">
