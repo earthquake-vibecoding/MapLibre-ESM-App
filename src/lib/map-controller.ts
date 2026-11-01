@@ -24,12 +24,12 @@ export class MapController {
     return this.alive && !!this.map.style;
   }
 
-  constructor(map: any, Popup: any, Marker: any) {
+  constructor(map: any, Marker: any) {
     this.map = map;
     this.Marker = Marker;
     this.ready = new Promise(resolve => {
       map.on('load', () => {
-        bootMap(map, Popup, this.initialData);
+        bootMap(map, this.initialData);
         resolve();
       });
     });
@@ -93,6 +93,9 @@ export class MapController {
       map.setLayoutProperty('points-layer', 'visibility', vis(!isEarthquakeTab));
       map.setPaintProperty('points-layer', 'circle-opacity', isEstShindoTab ? 0.1 : 1.0);
     }
+    if (map.getLayer('stations-hit')) {
+      map.setLayoutProperty('stations-hit', 'visibility', vis(!isEarthquakeTab));
+    }
 
     // 흔들림 격자 레이어: 실시간 탭이거나 격자 존재 시 지진 예보구역 탭에서도 표시
     if (map.getLayer('detected-layer')) {
@@ -121,12 +124,12 @@ export class MapController {
   setWavePaint(pFade: number, sFade: number): void {
     if (!this.live()) return;
     if (this.map.getLayer('p-wave-fill-layer')) {
-      this.map.setPaintProperty('p-wave-fill-layer', 'fill-opacity', 0.12 * pFade);
-      this.map.setPaintProperty('p-wave-layer', 'line-opacity', 0.85 * pFade);
+      this.map.setPaintProperty('p-wave-fill-layer', 'fill-opacity', 0.05 * pFade);
+      this.map.setPaintProperty('p-wave-layer', 'line-opacity', 0.8 * pFade);
     }
     if (this.map.getLayer('s-wave-fill-layer')) {
-      this.map.setPaintProperty('s-wave-fill-layer', 'fill-opacity', 0.18 * sFade);
-      this.map.setPaintProperty('s-wave-layer', 'line-opacity', 0.9 * sFade);
+      this.map.setPaintProperty('s-wave-fill-layer', 'fill-opacity', 0.09 * sFade);
+      this.map.setPaintProperty('s-wave-layer', 'line-opacity', 0.85 * sFade);
     }
   }
 
@@ -185,6 +188,6 @@ export class MapController {
 }
 
 export async function createMapController(container: HTMLElement): Promise<MapController> {
-  const { map, Popup, Marker } = await createMapControllerInstance(container);
-  return new MapController(map, Popup, Marker);
+  const { map, Marker } = await createMapControllerInstance(container);
+  return new MapController(map, Marker);
 }

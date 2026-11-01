@@ -3,6 +3,8 @@ import { processFrame } from './detector';
 import { getJindoString } from './jma-utils';
 import { soundService } from './services/sound';
 import { notificationService } from './services/notification.svelte';
+import { alertFilterPasses } from './alert-filter';
+import { dbg } from './debug';
 import type { MapController } from './map-controller';
 
 // 감지 활성화 플래그 — app-init이 ?detect=true를 강제 세팅하므로 'false'로 명시한 경우에만 끔
@@ -81,8 +83,12 @@ function processRealtimeImage(time: string, host: RealtimeHost): void {
     const result = processFrame(imageData, canvas.width, canvas.height, geojson.features, host.stationsState, DETECT_ENABLED);
 
     if (result.soundJindo > -3) {
-      soundService.playShakeDetected(result.soundJindo);
-      notificationService.notifyShakingDetection(getJindoString(result.soundJindo) || String(result.soundJindo));
+      const pass = alertFilterPasses(host.stationsState);
+      dbg(`감지 jindo=${result.soundJindo.toFixed(1)} 필터=${pass ? '통과' : '차단'}`);
+      if (pass) {
+        soundService.playShakeDetected(result.soundJindo);
+        notificationService.notifyShakingDetection(getJindoString(result.soundJindo) || String(result.soundJindo));
+      }
     }
 
     if (result.newEventCenter) {

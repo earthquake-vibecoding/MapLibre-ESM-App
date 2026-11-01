@@ -26,6 +26,7 @@ export default defineConfig({
     port: 3000,
     host: '0.0.0.0',
     allowedHosts: true,
+    strictPort: true, // 포트 점유 시 조용히 3001로 튀면 electron:dev의 wait-on이 깨짐
   },
   build: {
     outDir: 'dist',

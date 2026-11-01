@@ -9,9 +9,10 @@
     "preview": "vite preview",
     "start": "node server/index.mjs",
     "test": "vitest run",
-    "electron:dev": "concurrently -k \"pnpm dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron:dev": "concurrently -k \"pnpm dev\" \"wait-on http://localhost:3000 && ELECTRON_START_URL=http://localhost:3000 electron .\"",
     "electron:start": "electron .",
-    "check": "svelte-check --tsconfig ./tsconfig.json"
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "postinstall": "node scripts/sign-electron.cjs"
   },
   "private": true,
   "dependencies": {

@@ -133,14 +133,20 @@ export class NotificationService {
     });
   }
 
-  // 3. 흔들림 감지 (Shaking Detection) 알림
+  private lastShakingNotify = 0;
+
+  // 3. 흔들림 감지 (Shaking Detection) 알림 — 감지 프레임마다 호출되므로 60초 레이트리밋 (도배 방지)
   notifyShakingDetection(intensity: number | string, _locationCount?: number): void {
+    const now = Date.now();
+    if (now - this.lastShakingNotify < 60000) return;
+    this.lastShakingNotify = now;
+
     const title = `⚡ 실시간 지진 흔들림 감지`;
     const body = `관측망에서 진도 ${intensity} 수준의 주요 흔들림이 감지되었습니다.`;
 
     this.sendNotification(title, {
       body,
-      tag: `shaking-${Math.floor(Date.now() / 15000)}` // 15초 이내 중복 방지
+      tag: 'shaking-alert' // 고정 tag — 60초 간격 갱신이 알림 목록에 쌓이지 않고 교체됨
     });
   }
 }

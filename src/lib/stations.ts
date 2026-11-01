@@ -18,11 +18,14 @@ export async function loadStations(): Promise<StationLoadResult> {
       const lat = p.Location.latitude;
       const stn = {
         code: p.Code,
+        name: p.Name as string,
+        region: p.Region as string,
         lonlat: [lon, lat],
         jindo: null as number | null,
         near: [] as any[],
         delta: [] as number[],
         deltaSum: 0,
+        history: [] as { t: number; j: number | null }[], // 최근 60프레임(≈1분) 진도 추이
         event: null as any,
         expireTime: null as number | null,
         color: 'transparent'

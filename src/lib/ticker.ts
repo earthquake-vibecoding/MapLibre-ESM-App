@@ -3,6 +3,7 @@ import { isActiveEEW } from './quake-utils';
 import { computeWaveState, type SeismicTable } from './seismic';
 import { fetchLatestTime, type RealtimeHost } from './realtime-img';
 import { clearDetectedEvents } from './grid';
+import { reportAlertStatus } from './electron-bridge';
 import type { MapController } from './map-controller';
 
 export interface TickerHost extends RealtimeHost {
@@ -15,13 +16,14 @@ export interface TickerHost extends RealtimeHost {
 
 export class Ticker {
   private animationId: number | null = null;
-  private lastTimeFetchMs = 0;
+  private heartbeatId: ReturnType<typeof setInterval> | null = null;
   private lastWaveRenderTime = 0;
   private wavesActive = false;
 
   constructor(private host: TickerHost) {}
 
   start(): void {
+    this.startHeartbeat();
     this.loop();
   }
 
@@ -30,20 +32,22 @@ export class Ticker {
       cancelAnimationFrame(this.animationId);
     }
     this.animationId = null;
+    if (this.heartbeatId !== null) clearInterval(this.heartbeatId);
+    this.heartbeatId = null;
   }
 
   refreshTime(): void {
     fetchLatestTime(this.host);
   }
 
+  /** 감지 폴링(1s) — rAF는 백그라운드 탭에서 완전 정지하므로 타이머로 분리. 스로틀링 회피는 sound.ts keep-alive */
+  private startHeartbeat(): void {
+    if (typeof window === 'undefined') return;
+    this.heartbeatId = setInterval(() => fetchLatestTime(this.host), 1000);
+  }
+
   private loop = () => {
     const now = Date.now();
-
-    // 1. time update tick (1000ms)
-    if (now - this.lastTimeFetchMs >= 1000) {
-      this.lastTimeFetchMs = now;
-      fetchLatestTime(this.host);
-    }
 
     // EEW 만료 체크: 오래된 EEW 제거
     const currentEew = wolfxEewService.eewData;
@@ -77,6 +81,9 @@ export class Ticker {
         clearDetectedEvents();
       }
     }
+
+    // 트레이 상태 보고: 감지 격자 또는 활성 EEW (브라우저에선 noop)
+    reportAlertStatus(activeCount > 0 || !!wolfxEewService.eewData);
 
     // 4. wave animation
     this.updateWaves(now);

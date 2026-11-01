@@ -1,5 +1,6 @@
 <script lang="ts">
   import SoundPreview from './SoundPreview.svelte';
+  import AlertFilterSettings from './AlertFilterSettings.svelte';
 
   interface Props {
     hasDetectedGrids: boolean;
@@ -50,6 +51,10 @@
           : 'bg-zinc-100 border-zinc-300 text-zinc-500 hover:bg-zinc-200 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-700')}>
         감지 격자로 이동
       </button>
+    </div>
+
+    <div class="pt-3 border-t border-zinc-200 dark:border-zinc-700">
+      <AlertFilterSettings />
     </div>
 
     <div class="pt-3 border-t border-zinc-200 dark:border-zinc-700 flex justify-center">

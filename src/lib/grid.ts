@@ -1,23 +1,20 @@
+/** 두 관측점 거리(km) — haversine */
+export function haversineKm(a: number[], b: number[]): number {
+  const dLat = (b[1] - a[1]) * Math.PI / 180;
+  const dLon = (b[0] - a[0]) * Math.PI / 180;
+  const h = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(a[1] * Math.PI / 180) * Math.cos(b[1] * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
 export function computeNeighbors(stnArray: any[]): void {
   // 이웃 관측소 계산 (농어가/도서지역 대응 20km~30km 적응형)
   for (let i = 0; i < stnArray.length; i++) {
     const nearDists: { stn: any; dist: number }[] = [];
     for (let j = 0; j < stnArray.length; j++) {
       if (i === j) continue;
-      const lon1 = stnArray[i].lonlat[0];
-      const lat1 = stnArray[i].lonlat[1];
-      const lon2 = stnArray[j].lonlat[0];
-      const lat2 = stnArray[j].lonlat[1];
-
-      const R = 6371;
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      const dist = R * c;
-
+      const dist = haversineKm(stnArray[i].lonlat, stnArray[j].lonlat);
       if (dist <= 30) {
         nearDists.push({ stn: stnArray[j], dist });
       }

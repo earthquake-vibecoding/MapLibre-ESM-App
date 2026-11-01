@@ -7,6 +7,7 @@ import { loadStations } from './stations';
 import { fetchSeismicData } from './seismic';
 import { Ticker } from './ticker';
 import { createFeedHandlers, startQuakeFeed, stopQuakeFeed } from './quake-feed';
+import { dbg } from './debug';
 
 // HMR/리마운트 시 이전 initApp이 아직 await 중일 수 있음 — 시퀀스로 판별해 폐기
 let initSeq = 0;
@@ -31,6 +32,9 @@ export async function initApp(container: HTMLElement): Promise<void> {
     urlParams.set('detect', 'true');
     window.history.replaceState({}, '', `${window.location.pathname}?${urlParams.toString()}`);
   }
+  // DevTools 디버깅 핸들: window.__quake(전체 상태), window.__quakeLog(최근 로그). ?debug=1 → console 출력
+  (window as any).__quakeDebug = urlParams.has('debug');
+  (window as any).__quake = { ui, app };
 
   fetchSeismicData().then(data => {
     app.seismicData = data;

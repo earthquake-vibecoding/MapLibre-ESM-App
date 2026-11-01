@@ -17,6 +17,7 @@
   import HistoryDrawer from './lib/components/HistoryDrawer.svelte';
   import GifViewPanel from './lib/components/GifViewPanel.svelte';
   import Legend from './lib/components/Legend.svelte';
+  import StationPanel from './lib/components/StationPanel.svelte';
 
   let mapEl: HTMLElement | undefined = $state();
   let showTools = $state(false);
@@ -128,6 +129,10 @@
       eew={wolfxEewService.eewData}
       onToggleGifExpanded={() => (ui.isGifExpanded = !ui.isGifExpanded)}
     />
+  {/if}
+
+  {#if !ui.isCleanMode && ui.stationPanelCode}
+    <StationPanel />
   {/if}
 
   {#if ui.isCleanMode}

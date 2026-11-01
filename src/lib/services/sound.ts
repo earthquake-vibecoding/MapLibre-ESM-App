@@ -1,11 +1,13 @@
 import { playIntensitySound } from '../chime';
-import { playShindoSample, playDetectionSample } from '../sound-samples';
+import { playShindoSample, playDetectionSample, shindoSampleIndex } from '../sound-samples';
 import { jindoToScale } from '../jma-utils';
+import { dbg } from '../debug';
 
 export class SoundService {
   private audioCtx: AudioContext | null = null;
   private isUnlocked = false;
   private shindoAudio: HTMLAudioElement | null = null;
+  private keepAliveOsc: OscillatorNode | null = null;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -28,10 +30,12 @@ export class SoundService {
         if (ctx.state === 'suspended') {
           ctx.resume().then(() => {
             this.isUnlocked = true;
+            this.startKeepAlive(ctx);
             this.removeUnlockListeners(unlockAudio);
           }).catch(() => undefined);
         } else if (ctx.state === 'running') {
           this.isUnlocked = true;
+          this.startKeepAlive(ctx);
           this.removeUnlockListeners(unlockAudio);
         }
 
@@ -57,6 +61,29 @@ export class SoundService {
     document.removeEventListener('click', handler);
     document.removeEventListener('touchstart', handler);
     document.removeEventListener('keydown', handler);
+  }
+
+  /**
+   * 백그라운드 스로틀링 회피: 무음 수준(0.001) 오실레이터로 탭을 audible 상태로 유지.
+   * Chrome은 audible 탭을 강제 스로틀링(Intensive Wake Up Throttling) 대상에서 제외 —
+   * 백그라운드에서도 감지 폴링 setInterval이 1초 주기를 유지함. 탭에 🔊 표시가 생기는 게 부작용.
+   */
+  private startKeepAlive(ctx: AudioContext): void {
+    if (this.keepAliveOsc) return;
+    // Electron은 backgroundThrottling: false로 스로틀링 자체가 없음 — 트릭은 브라우저에서만 필요
+    if (typeof navigator !== 'undefined' && navigator.userAgent.includes('Electron')) return;
+    try {
+      const osc = ctx.createOscillator();
+      osc.frequency.value = 15; // 가청 하한(~20Hz) 아래 — 대부분의 스피커가 물리적으로 재생 불가, 사람에겐 무음
+      const gain = ctx.createGain();
+      gain.gain.value = 0.001;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      this.keepAliveOsc = osc;
+    } catch {
+      // WebAudio 미지원 환경 — 포기
+    }
   }
 
   private getAudioContext(): AudioContext | null {
@@ -134,12 +161,27 @@ export class SoundService {
     this.playIntensity(intensity);
   }
 
-  /** 흔들림 감지: shi0 비프 + 계급 상승 시 진도 알림음(shi1~7) 겹쳐 재생. 샘플 실패 시 신스 폴백 */
+  private lastDetectBeep = 0;
+
+  /** 흔들림 감지: shi0 비프(15초 쓰로틀 — 감지 프레임마다 호출되므로 도배 방지) + 계급 상승 시 진도 알림음(shi1~7) 겹침 */
   playShakeDetected(jindo?: number): void {
     const scale = jindo !== undefined && jindo >= 0.5 ? jindoToScale(jindo) : 0;
-    let played = playDetectionSample();
-    if (scale > 0 && playShindoSample(scale)) played = true;
-    if (played) return;
+    const now = Date.now();
+    const beepAllowed = now - this.lastDetectBeep > 15000;
+    let played = false;
+    if (beepAllowed) {
+      played = playDetectionSample();
+      if (played) {
+        this.lastDetectBeep = now;
+        dbg(`감지비프 shi0 (jindo=${jindo ?? '없음'})`);
+      }
+    }
+    if (scale > 0 && playShindoSample(scale)) {
+      played = true;
+      dbg(`진도음 shi${shindoSampleIndex(scale)}`);
+    }
+    // shi0 쓰로틀 중이어도 감지 프레임 자체는 처리된 것 — 신스 폴백은 샘플이 전부 실패했을 때만
+    if (played || !beepAllowed) return;
     const ctx = this.getAudioContext();
     if (!ctx) return;
     playIntensitySound(ctx, scale > 0 ? scale : 1);

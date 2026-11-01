@@ -5,7 +5,7 @@
 
 import { baseStyle, JAPAN_MAIN_BOUNDS, MAP_CENTER, MAP_ZOOM, geoSources } from './map-style';
 import { mapLayers } from './map-layers';
-import { bindStationPopups } from './map-marker';
+import { bindStationClicks } from './map-marker';
 
 /** 고해상도 진원지 X 아이콘 등록 — 96px 캔버스 @pixelRatio 4 (확대해도 계단 없음) */
 function addEpicenterIcon(map: any): void {
@@ -31,7 +31,7 @@ function addEpicenterIcon(map: any): void {
   map.addImage('epicenter-x', ctx.getImageData(0, 0, size, size), { pixelRatio: 4 });
 }
 
-export function bootMap(map: any, Popup: any, initialData: Map<string, any>): void {
+export function bootMap(map: any, initialData: Map<string, any>): void {
   for (const [id, data] of initialData) {
     map.addSource(id, { type: 'geojson', data });
   }
@@ -43,13 +43,13 @@ export function bootMap(map: any, Popup: any, initialData: Map<string, any>): vo
   for (const layer of mapLayers()) {
     map.addLayer(layer);
   }
-  bindStationPopups(map, Popup);
+  bindStationClicks(map);
   addEpicenterIcon(map);
   // 초기 카메라: 일본 본토(오키나와 제외) 고정 프레임
   map.fitBounds(JAPAN_MAIN_BOUNDS, { padding: 48, pitch: 0, bearing: 0, duration: 0 });
 }
 
-export async function createMapControllerInstance(container: HTMLElement): Promise<{ map: any; Popup: any; Marker: any }> {
+export async function createMapControllerInstance(container: HTMLElement): Promise<{ map: any; Marker: any }> {
   // esbuild 등의 번들러가 URL import를 해석하려다 실패하는 것을 방지하기 위해
   // 네이티브 동적 import를 사용. esm.sh 실패 시 jsdelivr로 폴백.
   const sources = [
@@ -67,7 +67,7 @@ export async function createMapControllerInstance(container: HTMLElement): Promi
     }
   }
   if (!maplibreModule) throw lastError ?? new Error('maplibre-gl 로드 실패');
-  const { Map, Popup, Marker } = maplibreModule;
+  const { Map, Marker } = maplibreModule;
 
   const map = new Map({
     container,
@@ -82,5 +82,5 @@ export async function createMapControllerInstance(container: HTMLElement): Promi
     console.error('Map error:', e);
   });
 
-  return { map, Popup, Marker };
+  return { map, Marker };
 }

@@ -44,7 +44,7 @@ export function mapLayers(): any[] {
       source: 'p-wave',
       paint: {
         'fill-color': '#3b82f6',
-        'fill-opacity': 0.12
+        'fill-opacity': 0.05
       }
     },
     {
@@ -53,8 +53,9 @@ export function mapLayers(): any[] {
       source: 'p-wave',
       paint: {
         'line-color': '#3b82f6',
-        'line-width': 2.5,
-        'line-opacity': 0.85
+        'line-width': 1.5,
+        'line-dasharray': [2, 2],
+        'line-opacity': 0.8
       }
     },
     {
@@ -63,7 +64,7 @@ export function mapLayers(): any[] {
       source: 's-wave',
       paint: {
         'fill-color': '#ef4444',
-        'fill-opacity': 0.18
+        'fill-opacity': 0.09
       }
     },
     {
@@ -72,8 +73,8 @@ export function mapLayers(): any[] {
       source: 's-wave',
       paint: {
         'line-color': '#ef4444',
-        'line-width': 2.5,
-        'line-opacity': 0.9
+        'line-width': 1.8,
+        'line-opacity': 0.85
       }
     },
     {
@@ -91,6 +92,17 @@ export function mapLayers(): any[] {
           16, 16
         ],
         'circle-color': ['get', 'color'],
+        'circle-stroke-width': 0
+      }
+    },
+    // 관측소 클릭 판정영역 (점이 작아서 못 누르는 문제 — 투명 큰 원)
+    {
+      id: 'stations-hit',
+      type: 'circle',
+      source: 'points',
+      paint: {
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 8, 12, 16],
+        'circle-color': 'rgba(0,0,0,0)',
         'circle-stroke-width': 0
       }
     },

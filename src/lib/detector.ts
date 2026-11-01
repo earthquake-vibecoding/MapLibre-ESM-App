@@ -1,6 +1,12 @@
 import { applyMedianFilter } from './noise-filter';
 import { getJindoFromColor } from './jma-utils';
 
+/** 관측소별 진도 추이 링버퍼 — StationPanel 스파크라인용 (최근 60프레임 ≈ 1분) */
+function pushHistory(stn: any, t: number, j: number | null): void {
+  stn.history.push({ t, j });
+  if (stn.history.length > 60) stn.history.shift();
+}
+
 export interface DetectResult {
   updated: boolean;
   detectedUpdated: boolean;
@@ -31,6 +37,7 @@ export function processFrame(
   let newEventDetected = false;
   let detectedCenter: [number, number] | null = null;
   let soundJindoToPlay = -3;
+  const frameTime = Date.now(); // 히스토리 타임스탬프 — 프레임당 1회
 
   for (const feature of features) {
     const px = feature.properties.px;
@@ -70,10 +77,12 @@ export function processFrame(
             if (stn.delta.length > 10) stn.delta.pop();
 
             stn.deltaSum = stn.delta.reduce((acc: number, val: number) => acc + val, 0);
+            pushHistory(stn, frameTime, filteredJindo);
           } else {
             stn.jindo = null;
             stn.delta = [];
             stn.deltaSum = 0;
+            pushHistory(stn, frameTime, null);
           }
         }
       }
