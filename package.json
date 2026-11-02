@@ -16,7 +16,8 @@
   },
   "private": true,
   "dependencies": {
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "maplibre-gl": "^6.16.0"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^6.2.0",

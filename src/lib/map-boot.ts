@@ -3,6 +3,10 @@
  * map-controller에서 분리 (200줄 규칙).
  */
 
+import { Map as MaplibreMap, Marker, setWorkerUrl } from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+// 워커를 번들 청크로 내보고 URL을 직접 지정 — maplibre 기본 경로는 Vite dev/prod 모두 404
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { baseStyle, JAPAN_MAIN_BOUNDS, MAP_CENTER, MAP_ZOOM, geoSources } from './map-style';
 import { mapLayers } from './map-layers';
 import { bindStationClicks } from './map-marker';
@@ -49,27 +53,9 @@ export function bootMap(map: any, initialData: Map<string, any>): void {
   map.fitBounds(JAPAN_MAIN_BOUNDS, { padding: 48, pitch: 0, bearing: 0, duration: 0 });
 }
 
-export async function createMapControllerInstance(container: HTMLElement): Promise<{ map: any; Marker: any }> {
-  // esbuild 등의 번들러가 URL import를 해석하려다 실패하는 것을 방지하기 위해
-  // 네이티브 동적 import를 사용. esm.sh 실패 시 jsdelivr로 폴백.
-  const sources = [
-    'https://esm.sh/maplibre-gl@3',
-    'https://cdn.jsdelivr.net/npm/maplibre-gl@3/+esm'
-  ];
-  let maplibreModule: any = null;
-  let lastError: unknown = null;
-  for (const src of sources) {
-    try {
-      maplibreModule = await new Function('src', 'return import(src)')(src);
-      break;
-    } catch (e) {
-      lastError = e;
-    }
-  }
-  if (!maplibreModule) throw lastError ?? new Error('maplibre-gl 로드 실패');
-  const { Map, Marker } = maplibreModule;
-
-  const map = new Map({
+export function createMapControllerInstance(container: HTMLElement): { map: any; Marker: any } {
+  setWorkerUrl(maplibreWorkerUrl);
+  const map = new MaplibreMap({
     container,
     renderWorldCopies: false,
     style: baseStyle(),

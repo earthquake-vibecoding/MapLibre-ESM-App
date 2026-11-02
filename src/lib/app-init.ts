@@ -43,7 +43,7 @@ export async function initApp(container: HTMLElement): Promise<void> {
   try {
     app.mapCtl = await createMapController(container);
   } catch (error) {
-    console.warn('Failed to load maplibre-gl from esm.sh:', error);
+    console.warn('Failed to create map controller:', error);
   }
   if (seq !== initSeq) {
     // 대기 중에 destroy됨 — 새로 만든 맵이 있으면 회수하고 중단
