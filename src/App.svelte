@@ -8,6 +8,7 @@
   import { notificationService } from './lib/services/notification.svelte';
   import { groupHistoryList } from './lib/history-group';
   import { isActiveEEW } from './lib/quake-utils';
+  import { focusOverseasQuake } from './lib/focus';
 
   import TopBar from './lib/components/TopBar.svelte';
   import MapTools from './lib/components/MapTools.svelte';
@@ -15,6 +16,7 @@
   import EewBanner from './lib/components/EewBanner.svelte';
   import QuakeDetailPanel from './lib/components/QuakeDetailPanel.svelte';
   import HistoryDrawer from './lib/components/HistoryDrawer.svelte';
+  import OverseasPanel from './lib/components/OverseasPanel.svelte';
   import GifViewPanel from './lib/components/GifViewPanel.svelte';
   import Legend from './lib/components/Legend.svelte';
   import StationPanel from './lib/components/StationPanel.svelte';
@@ -166,6 +168,12 @@
       isGifExpanded={ui.isGifExpanded}
       eew={wolfxEewService.eewData}
       onToggleGifExpanded={() => (ui.isGifExpanded = !ui.isGifExpanded)}
+    />
+  {/if}
+
+  {#if !ui.isCleanMode && ui.activeTab === 'overseas'}
+    <OverseasPanel
+      onFocusQuake={(q) => focusOverseasQuake(app.mapCtl, q)}
     />
   {/if}
 

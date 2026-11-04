@@ -17,6 +17,15 @@ export function baseStyle(): any {
       japan: {
         type: 'geojson',
         data: '/japan.json'
+      },
+      // Bird(2003) 판경계 / GEM 활단층 — 일본 주변 클립·단순화된 정적 데이터
+      'plate-boundaries': {
+        type: 'geojson',
+        data: '/plate-boundaries.json'
+      },
+      'active-faults': {
+        type: 'geojson',
+        data: '/active-faults.json'
       }
     },
     layers: [
@@ -62,6 +71,29 @@ export function baseStyle(): any {
           'line-color': '#a1a1aa',
           'line-width': 0.5
         }
+      },
+      {
+        // 판경계 — 해역 대지진 맥락 (해구·해곽)
+        id: 'plate-boundaries-line',
+        type: 'line',
+        source: 'plate-boundaries',
+        paint: {
+          'line-color': '#f97316',
+          'line-width': 1.4,
+          'line-opacity': 0.75,
+          'line-dasharray': [3, 2]
+        }
+      },
+      {
+        // 활단층 — 육지 내륙 지진 맥락
+        id: 'active-faults-line',
+        type: 'line',
+        source: 'active-faults',
+        paint: {
+          'line-color': '#ef4444',
+          'line-width': 1.2,
+          'line-opacity': 0.6
+        }
       }
     ]
   };
@@ -76,6 +108,7 @@ export function geoSources(): [string, any][] {
     ['p-wave', empty],
     ['s-wave', empty],
     ['p2p-epicenter', empty],
+    ['overseas-epicenter', empty],
     ['quake-stations', empty],
     ['est-shindo-mask-area', empty]
   ];

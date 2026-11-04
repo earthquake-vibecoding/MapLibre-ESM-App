@@ -4,7 +4,7 @@ import { createStationHighlightMarker, type StationLocation } from './map-marker
 import { VIEW } from './config';
 
 export interface VisState {
-  tab: 'realtime' | 'earthquake' | 'est_shindo_region';
+  tab: 'realtime' | 'earthquake' | 'est_shindo_region' | 'overseas';
   mode: 'areas' | 'stations' | 'both';
   waveRings: boolean;
   eewActive: boolean;

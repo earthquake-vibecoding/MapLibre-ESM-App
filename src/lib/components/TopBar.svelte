@@ -20,7 +20,8 @@
   const tabDefs: { id: Tab; label: string; dot: string; experimental?: boolean }[] = [
     { id: 'earthquake', label: '지진', dot: 'bg-rose-500' },
     { id: 'est_shindo_region', label: '예상진도', dot: 'bg-amber-500', experimental: true },
-    { id: 'realtime', label: '실시간', dot: 'bg-indigo-500' }
+    { id: 'realtime', label: '실시간', dot: 'bg-indigo-500' },
+    { id: 'overseas', label: '해외', dot: 'bg-sky-500' }
   ];
 
   const seg = 'px-3 py-1.5 text-xs sm:text-sm font-bold transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap ';

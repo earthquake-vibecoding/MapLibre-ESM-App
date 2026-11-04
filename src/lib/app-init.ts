@@ -7,6 +7,7 @@ import { loadStations } from './stations';
 import { fetchSeismicData } from './seismic';
 import { Ticker } from './ticker';
 import { createFeedHandlers, startQuakeFeed, stopQuakeFeed } from './quake-feed';
+import { usgsService } from './services/usgs.svelte';
 import { dbg } from './debug';
 
 // HMR/리마운트 시 이전 initApp이 아직 await 중일 수 있음 — 시퀀스로 판별해 폐기
@@ -15,6 +16,7 @@ let initSeq = 0;
 export function destroyApp(): void {
   initSeq++;
   stopQuakeFeed();
+  usgsService.stop();
   app.destroy();
 }
 
@@ -70,6 +72,7 @@ export async function initApp(container: HTMLElement): Promise<void> {
 
   startTicker();
   startQuakeFeed(createFeedHandlers(app));
+  usgsService.start();
 }
 
 function onMapReady(): void {

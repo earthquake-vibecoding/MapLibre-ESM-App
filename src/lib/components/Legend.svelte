@@ -24,6 +24,26 @@
           {e.l}
         </span>
       {/each}
+      <span class="w-px self-stretch bg-zinc-200 dark:bg-zinc-700"></span>
+      <span class="flex items-center gap-1 font-bold text-zinc-700 dark:text-zinc-200">
+        <span class="w-4 h-0 border-t-2 border-dashed border-orange-500"></span>
+        판경계
+      </span>
+      <span class="flex items-center gap-1 font-bold text-zinc-700 dark:text-zinc-200">
+        <span class="w-4 h-0 border-t-2 border-red-500"></span>
+        활단층
+      </span>
+      <!-- 역사지진 행 — 마커 숨김 중이라 같이 숨김 (map-boot.ts에서 addHistoricalQuakes 주석 해제 시 같이 복구)
+      <span class="flex items-center gap-1 font-bold text-zinc-700 dark:text-zinc-200">
+        <span class="flex -space-x-0.5">
+          <span class="w-1.5 h-1.5 rounded-full" style="background:#FF5500"></span>
+          <span class="w-1.5 h-1.5 rounded-full" style="background:#FF0000"></span>
+          <span class="w-1.5 h-1.5 rounded-full" style="background:#A00000"></span>
+          <span class="w-1.5 h-1.5 rounded-full" style="background:#990099"></span>
+        </span>
+        역사지진
+      </span>
+      -->
       <button onclick={() => (open = false)} title="범례 접기" class="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer px-0.5">−</button>
     </div>
   {:else}

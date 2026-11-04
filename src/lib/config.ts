@@ -29,6 +29,7 @@ export const TIMING = {
   relayMs: 500,            // 메인 → 외부 패널 스냅샷 릴레이
   panelSnapMs: 500,        // 패널 UI 스냅샷 갱신
   quakePollMs: 20_000,     // P2PQuake 이력 폴링
+  usgsPollMs: 300_000,     // USGS 해외지진 피드 폴링 (5분)
   p2pKeepMs: 180_000,      // 실시간 수신 지진 정보 유지 시간
   kmoniLagS: 2,            // kmoni 발행 지연 보정 (초)
   shindoSoundGapMs: 1500,  // 같은 계급 진도음 재생 최소 간격
@@ -52,6 +53,7 @@ export const VIEW = {
   clusterFly: { zoom: 6.2, speed: 1.2 },             // 감지 격자 묶음 이동
   eewFly: { zoom: 6.2, speed: 1.2 },                 // EEW 진원 이동
   epicenterFly: { zoom: 6.8, speed: 1.2, duration: 1200 }, // 진앙지 이동 버튼
+  overseasFly: { zoom: 5, duration: 1000 }, // 해외지진 행 클릭 (광역 시야)
   fitMaxZoom: 8,          // 진도 분포 fitBounds 상한
   focusStationZoom: 10.5, // 목록 관측소 포커스 줌
   focusStationMarkerMs: 7000, // 관측소 하이라이트 마커 유지 시간

@@ -128,6 +128,18 @@ export function mapLayers(): any[] {
         'icon-ignore-placement': true
       }
     },
+    // 해외지진 진원지 X (해외 탭에서 행 클릭 시 표시)
+    {
+      id: 'overseas-epicenter-layer',
+      type: 'symbol',
+      source: 'overseas-epicenter',
+      layout: {
+        'icon-image': 'epicenter-x',
+        'icon-size': ['interpolate', ['linear'], ['zoom'], 4, 0.6, 8, 1.1],
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true
+      }
+    },
     // 관측소 개별 진도 점 레이어
     {
       id: 'quake-stations-halo',

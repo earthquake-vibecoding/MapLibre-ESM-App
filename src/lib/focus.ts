@@ -111,3 +111,13 @@ export function focusOnEpicenter(mapCtl: MapController | null, item: any): void 
     mapCtl.fitFullView(1000);
   }
 }
+
+/** 해외지진 행 클릭: 진원 X 표시 + 광역 플라이 */
+export function focusOverseasQuake(mapCtl: MapController | null, q: { lonlat: [number, number] }): void {
+  if (!mapCtl) return;
+  mapCtl.setSource('overseas-epicenter', {
+    type: 'FeatureCollection',
+    features: [{ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: q.lonlat } }]
+  });
+  mapCtl.flyTo({ center: q.lonlat, ...VIEW.overseasFly });
+}

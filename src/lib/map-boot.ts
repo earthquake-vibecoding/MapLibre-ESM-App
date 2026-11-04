@@ -10,6 +10,7 @@ import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&ur
 import { baseStyle, JAPAN_MAIN_BOUNDS, MAP_CENTER, MAP_ZOOM, geoSources } from './map-style';
 import { mapLayers } from './map-layers';
 import { bindStationClicks } from './map-marker';
+import { addTectonicLabels } from './map-tectonics'; // addHistoricalQuakes — 역사지진 일단 숨김 (2026-11-04)
 
 /** 고해상도 진원지 X 아이콘 등록 — 96px 캔버스 @pixelRatio 4 (확대해도 계단 없음) */
 function addEpicenterIcon(map: any): void {
@@ -49,6 +50,9 @@ export function bootMap(map: any, initialData: Map<string, any>): void {
   }
   bindStationClicks(map);
   addEpicenterIcon(map);
+  addTectonicLabels(map);
+  // 역사지진 마커 — 일단 숨김. 다시 켜려면 아래 주석 해제 (데이터·코드는 map-tectonics.ts에 보존됨)
+  // addHistoricalQuakes(map);
   // 초기 카메라: 일본 본토(오키나와 제외) 고정 프레임
   map.fitBounds(JAPAN_MAIN_BOUNDS, { padding: 48, pitch: 0, bearing: 0, duration: 0 });
 }

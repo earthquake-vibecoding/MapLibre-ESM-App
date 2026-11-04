@@ -1,4 +1,4 @@
-export type Tab = 'realtime' | 'earthquake' | 'est_shindo_region';
+export type Tab = 'realtime' | 'earthquake' | 'est_shindo_region' | 'overseas';
 export type IntensityDisplayMode = 'areas' | 'stations' | 'both';
 export type RealtimeDataType = 'jma_s' | 'jma_b';
 
