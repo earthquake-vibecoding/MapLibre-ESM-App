@@ -1,4 +1,4 @@
-import { isActiveEEW, parseJSTTime } from './quake-utils';
+import { isActiveEEW, isEewCoordValid, parseJSTTime } from './quake-utils';
 import { WAVE } from './config';
 
 export interface SeismicTable {
@@ -111,7 +111,8 @@ export function computeWaveState(
   seismicData: SeismicTable,
   now: number
 ): WaveState {
-  const active = !!(eew && isActiveEEW(eew));
+  // 좌표 없는 EEW(진원 미확정)는 (0,0)에 거대 원이 그려지므로 링 자체를 끔 — 마커/플라이와 동일 가드
+  const active = !!(eew && isActiveEEW(eew) && isEewCoordValid(eew));
   if (!active) {
     return { active: false, pFc: EMPTY_FC, sFc: EMPTY_FC, pFade: 0, sFade: 0 };
   }

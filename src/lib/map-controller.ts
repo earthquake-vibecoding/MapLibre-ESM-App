@@ -9,7 +9,6 @@ export interface VisState {
   waveRings: boolean;
   eewActive: boolean;
   hasDetectedGrids: boolean;
-  estEpi: [number, number] | null;
 }
 
 export class MapController {
@@ -107,16 +106,16 @@ export class MapController {
       map.setLayoutProperty('detected-layer', 'visibility', vis(!isEarthquakeTab || s.hasDetectedGrids));
     }
 
-    // P파/S파 레이어: showWaveRings && (실시간 탭 또는 EEW/추정진원 활성)
-    const waveVis = s.waveRings && (!isEarthquakeTab || s.eewActive || s.estEpi !== null);
+    // P파/S파 레이어: showWaveRings && (실시간 탭 또는 EEW 활성)
+    const waveVis = s.waveRings && (!isEarthquakeTab || s.eewActive);
     for (const id of ['p-wave-fill-layer', 'p-wave-layer', 's-wave-fill-layer', 's-wave-layer']) {
       if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', vis(waveVis));
     }
 
-    // 진원지 마커: 지진정보 탭이거나 EEW/추정진원 활성 시 항상 표시
-    const epiVis = isEarthquakeTab || s.eewActive || s.estEpi !== null;
-    if (map.getLayer('p2p-epicenter-layer')) {
-      map.setLayoutProperty('p2p-epicenter-layer', 'visibility', vis(epiVis));
+    // 진원지 마커: 지진정보 탭이거나 EEW 활성 시 항상 표시 / 해외 X는 해외 탭에서만
+    const epiVis = isEarthquakeTab || s.eewActive;
+    for (const [id, show] of [['p2p-epicenter-layer', epiVis], ['overseas-epicenter-layer', s.tab === 'overseas']] as const) {
+      if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', vis(show));
     }
 
     // 관측소 개별 진도 점: 지진 정보 탭 + (stations/both 모드)

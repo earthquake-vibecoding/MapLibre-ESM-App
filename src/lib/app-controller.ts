@@ -19,7 +19,6 @@ export class AppController {
   geojson: any = null;
   seismicData: any = {};
   areaData: AreaData | null = null;
-  estEpi: [number, number] | null = null;
   ticker: Ticker | null = null;
   lastEewKey: string | null = null;
   lastEewTime = 0;
@@ -38,7 +37,6 @@ export class AppController {
     const features = buildEpicenterFeatures({
       eew: wolfxEewService.eewData,
       tab: ui.activeTab,
-      estEpi: this.estEpi,
       quake: quake ?? p2pQuakeService.selectedQuake
     });
     this.mapCtl.setSource('p2p-epicenter', { type: 'FeatureCollection', features });
@@ -59,9 +57,7 @@ export class AppController {
   updateDetectedEvents(): void {
     const { features, gridCount } = buildDetectedFeatures(this.stationsState);
     this.mapCtl?.setSource('detected', { type: 'FeatureCollection', features });
-    this.estEpi = null;
     ui.hasDetectedGrids = gridCount > 0;
-    this.updateEpicenter();
     this.updateVisibility();
     saveDetectedEvents(this.stationsState);
   }
@@ -73,8 +69,7 @@ export class AppController {
       mode: ui.intensityDisplayMode,
       waveRings: ui.showWaveRings,
       eewActive: isActiveEEW(wolfxEewService.eewData),
-      hasDetectedGrids: Array.from(this.stationsState.values()).some(s => s.event !== null),
-      estEpi: this.estEpi
+      hasDetectedGrids: Array.from(this.stationsState.values()).some(s => s.event !== null)
     });
   }
 
@@ -192,7 +187,7 @@ export class AppController {
     this.updateEpicenter({ earthquake: { hypocenter: { latitude: 35.5, longitude: 140.0 } } });
     this.updateAreaIntensity(mockEew);
     this.updateVisibility();
-    soundService.playShindoAudio('5+');
+    soundService.playShindoAudio(); // 실제 EEW와 동일 — Shindo.wav만
     notificationService.notifyEew(mockEew);
     this.mapCtl?.flyTo({ center: [140.0, 35.5], ...VIEW.epicenterFly });
   }

@@ -38,7 +38,8 @@ export function createFeedHandlers(c: AppController): QuakeFeedHandlers {
 }
 
 function handleNewQuake(c: AppController, data: any): void {
-  soundService.playShindoAudio(data.earthquake?.maxScale);
+  // Shindo.wav만 — 진도음 계급은 p2p 소식 진도값이 아니라 실시간 감지(playShakeDetected)가 담당
+  soundService.playShindoAudio();
   notificationService.notifyQuake(data);
   c.setTab('earthquake');
   c.updateEpicenter(data);
@@ -58,11 +59,15 @@ function handleEew(c: AppController, mappedEew: any): void {
   if (eewKey !== c.lastEewKey || (now - c.lastEewTime > TIMING.eewSoundGapMs)) {
     c.lastEewKey = eewKey;
     c.lastEewTime = now;
-    soundService.playShindoAudio(mappedEew.MaxIntensity);
+    // Shindo.wav만 — 진도음 계급은 예보(MaxIntensity)가 아니라 실측 감지가 담당
+    soundService.playShindoAudio();
     notificationService.notifyEew(mappedEew);
   }
   c.updateEpicenter();
-  c.updateAreaIntensity(mappedEew);
+  // 예보 구역/지점이 있을 때만 색칠 — areas 없는 EEW(wolfx)가 기존 지진 탭 색을 지우지 않게 (원본은 EEW에서 색칠 안 함)
+  if (mappedEew.areas?.length || mappedEew.points?.length) {
+    c.updateAreaIntensity(mappedEew);
+  }
   c.updateVisibility();
 }
 

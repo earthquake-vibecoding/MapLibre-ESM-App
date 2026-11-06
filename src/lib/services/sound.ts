@@ -150,10 +150,9 @@ export class SoundService {
       }
     } catch (e) {
       console.warn('Shindo.mp3 playback error:', e);
+      // 진도음 폴백 제거 — scale 없는 호출(소식/EEW)은 Shindo.wav만이 원칙 (playPromise 실패 경로와 정합)
       if (scale !== undefined) {
         this.playIntensity(scale);
-      } else {
-        this.playIntensity(5);
       }
     }
   }

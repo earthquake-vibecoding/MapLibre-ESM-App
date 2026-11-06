@@ -127,11 +127,10 @@ export function buildMockEew(): EEWMessage {
 export interface EpicenterDeps {
   eew: any;
   tab: string;
-  estEpi: [number, number] | null;
   quake: any;
 }
 
-export function buildEpicenterFeatures({ eew, tab, estEpi, quake }: EpicenterDeps): any[] {
+export function buildEpicenterFeatures({ eew, tab, quake }: EpicenterDeps): any[] {
   const features: any[] = [];
 
   if (eew && isActiveEEW(eew) && isEewCoordValid(eew)) {
@@ -144,14 +143,7 @@ export function buildEpicenterFeatures({ eew, tab, estEpi, quake }: EpicenterDep
   }
 
   if (tab === 'realtime') {
-    if (estEpi !== null && Array.isArray(estEpi) && estEpi.length === 2) {
-      features.push({
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: estEpi },
-        properties: { isEst: true }
-      });
-    }
-    return features;
+    return features; // 실시간 탭엔 진원지 마커 없음 (선택 지진 X는 지진 탭 전용)
   }
 
   const targetData = quake;

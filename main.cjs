@@ -117,6 +117,10 @@ function createPanel() {
   panelWindow.setAlwaysOnTop(true, 'floating');
   const url = startUrl + (startUrl.includes('?') ? '&' : '?') + 'panel=station';
   panelWindow.loadURL(url);
+  // 패널 렌더러가 onSelect를 등록하기 전에 도착한 select IPC는 유실 — 로드 완료 후 최신 선택 재전송
+  panelWindow.webContents.on('did-finish-load', () => {
+    panelWindow.webContents.send('panel:select', lastPanelSelect);
+  });
   panelWindow.on('resize', trackPanelBounds);
   panelWindow.on('move', trackPanelBounds);
   panelWindow.on('close', savePanelBounds);
@@ -151,7 +155,9 @@ ipcMain.on('panel:relay', (e, data) => {
   }
 });
 // 선택 동기화: 보낸 창 반대편으로 전달 (메인 지도 클릭 ↔ 패널 검색)
+let lastPanelSelect = null; // 패널 창 로드 완료 후 재전송용 — 리스너 등록 전에 온 select는 유실됨
 ipcMain.on('panel:select', (e, code) => {
+  lastPanelSelect = code;
   for (const w of [mainWindow, panelWindow]) {
     if (w && !w.isDestroyed() && w.webContents !== e.sender) w.webContents.send('panel:select', code);
   }

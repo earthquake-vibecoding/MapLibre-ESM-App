@@ -28,6 +28,8 @@ export class UsgsService {
         .filter((f: any) => f.properties?.type === 'earthquake' && typeof f.properties?.mag === 'number')
         .filter((f: any) => {
           const [lon, lat] = f.geometry?.coordinates ?? [];
+          // 좌표 누락 feature 제외 — 통과시키면 아래 map에서 TypeError로 피드 전체 갱신이 죽음
+          if (typeof lon !== 'number' || typeof lat !== 'number') return false;
           return !(lon >= JAPAN_BBOX.lonMin && lon <= JAPAN_BBOX.lonMax && lat >= JAPAN_BBOX.latMin && lat <= JAPAN_BBOX.latMax);
         })
         .map((f: any) => ({

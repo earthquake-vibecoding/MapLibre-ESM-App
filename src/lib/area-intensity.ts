@@ -78,6 +78,7 @@ export function buildStationFeatures(points: any[], stationMap: Map<string, any>
         type: 'Feature',
         geometry: { type: 'Point', coordinates: [st.lon, st.lat] },
         properties: {
+          code: st.code, // 지진 탭 관측소 클릭 → StationPanel 식별용 (없으면 클릭이 무반응)
           name: pt.addr,
           pref: pt.pref || st.pref || '',
           scale: pt.scale,

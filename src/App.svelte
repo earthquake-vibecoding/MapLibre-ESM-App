@@ -57,6 +57,8 @@
     panelBridge?.onState((open) => {
       panelOpen = open;
       setPanelRelay(open);
+      // 열림 직후 현재 선택 동기화 — $effect는 값 변경에만 반응해서 패널이 나중에 열리면 못 받음
+      if (open) panelBridge?.select(ui.stationPanelCode);
     });
     panelBridge?.isOpen().then((open) => {
       panelOpen = open;

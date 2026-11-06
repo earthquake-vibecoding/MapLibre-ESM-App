@@ -13,7 +13,6 @@ export interface TickerHost extends RealtimeHost {
   updateVisibility(): void;
   updateEpicenter(): void;
   updateDetectedEvents(): void;
-  resetMapView(): void;
 }
 
 export class Ticker {
@@ -93,7 +92,8 @@ export class Ticker {
     if (expired) {
       if (activeCount === 0) {
         finishDetectionEpisode(); // 에피소드 종료 → 감지 기록 1건
-        this.host.resetMapView();
+        // 카메라만 전체 보기 복귀 (원본 동작) — 클린모드 진입은 전체보기 버튼 전용
+        this.host.mapCtl?.fitFullView(800);
         clearDetectedEvents();
       }
       this.host.updateDetectedEvents();

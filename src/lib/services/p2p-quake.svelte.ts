@@ -108,6 +108,7 @@ export class P2pQuakeService {
         Depth: data.earthquake?.hypocenter?.depth || 0,
         Magunitude: data.earthquake?.hypocenter?.magnitude || 0,
         MaxIntensity: scaleToJmaString(maxScaleFrom),
+        areas: data.areas ?? [], // 예보구역 — buildAreaScaleMap이 이걸로 지역 색칠 (누락 시 EEW 지역 색칠이 죽음)
         isWarn: false,
         isCancel: false
       };
