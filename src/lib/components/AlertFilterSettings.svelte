@@ -1,7 +1,8 @@
 <script lang="ts">
   import { ui } from '../state.svelte';
-  import { JMA_LEVELS } from '../jma-utils';
-  import { loadFavorites } from '../station-favorites';
+  import { JMA_LEVELS } from '../quake/jma-utils';
+  import { loadFavorites } from '../quake/station-favorites';
+  import { KEYS } from '../config';
 
   const RADII = [30, 50, 100, 200, 300];
 
@@ -10,7 +11,7 @@
   function set(patch: Partial<typeof ui.areaFilter>): void {
     ui.areaFilter = { ...ui.areaFilter, ...patch };
     try {
-      localStorage.setItem('alert_filter', JSON.stringify(ui.areaFilter));
+      localStorage.setItem(KEYS.alertFilter, JSON.stringify(ui.areaFilter));
     } catch {
       // ignore
     }

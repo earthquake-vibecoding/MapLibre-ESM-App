@@ -1,10 +1,12 @@
+import { KEYS } from './config';
+
 export type Tab = 'realtime' | 'earthquake' | 'est_shindo_region' | 'overseas';
 export type IntensityDisplayMode = 'areas' | 'stations' | 'both';
 export type RealtimeDataType = 'jma_s' | 'jma_b';
 
 function loadTheme(): boolean {
   try {
-    return localStorage.getItem('quake_theme') !== 'light';
+    return localStorage.getItem(KEYS.theme) !== 'light';
   } catch {
     return true;
   }
@@ -19,7 +21,7 @@ export interface AreaFilter {
 function loadAlertFilter(): AreaFilter {
   const def: AreaFilter = { enabled: false, minScale: 30, radiusKm: 100 };
   try {
-    const v = JSON.parse(localStorage.getItem('alert_filter') || 'null');
+    const v = JSON.parse(localStorage.getItem(KEYS.alertFilter) || 'null');
     if (v && typeof v.enabled === 'boolean' && typeof v.minScale === 'number' && typeof v.radiusKm === 'number') return v;
   } catch {
     // ignore

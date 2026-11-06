@@ -6,8 +6,8 @@
   import { p2pQuakeService } from './lib/services/p2p-quake.svelte';
   import { wolfxEewService } from './lib/services/wolfx-eew.svelte';
   import { notificationService } from './lib/services/notification.svelte';
-  import { groupHistoryList } from './lib/history-group';
-  import { isActiveEEW } from './lib/quake-utils';
+  import { groupHistoryList } from './lib/quake/history-group';
+  import { isActiveEEW } from './lib/quake/quake-utils';
   import { focusOverseasQuake } from './lib/focus';
 
   import TopBar from './lib/components/TopBar.svelte';
@@ -20,19 +20,16 @@
   import GifViewPanel from './lib/components/GifViewPanel.svelte';
   import Legend from './lib/components/Legend.svelte';
   import StationPanel from './lib/components/StationPanel.svelte';
-  import { isPanelMode, initPanelMode } from './lib/panel-mode';
-  import { setPanelRelay } from './lib/station-relay';
+  import { isPanelMode, initPanelMode, initPanelBridge, sendPanelSelect, togglePanelWindow, hasPanelBridge } from './lib/panel-mode';
   import { VIEW } from './lib/config';
 
   let mapEl: HTMLElement | undefined = $state();
   let showTools = $state(false);
   let panelOpen = $state(false);
-  const hasPanelBridge = typeof window !== 'undefined' && !!window.quakeBridge?.panel;
-  const panelBridge = hasPanelBridge ? window.quakeBridge!.panel : undefined;
 
   // 선택 관측소 → 패널 창 동기화 (지도 클릭/오버레이 닫기 모두, null 포함). 패널 창 자신은 이쪽으로 보내지 않음
   $effect(() => {
-    if (!isPanelMode) panelBridge?.select(ui.stationPanelCode);
+    if (!isPanelMode) sendPanelSelect(ui.stationPanelCode);
   });
 
   const processedHistoryList = $derived(groupHistoryList(p2pQuakeService.p2pHistoryList, ui.groupUnknown));
@@ -53,21 +50,9 @@
       return;
     }
     if (mapEl) initApp(mapEl);
-    // 메인 창: 패널 창 개폐 → 릴레이 on/off + 버튼 상태, 패널의 flyTo 요청 → 지도 이동
-    panelBridge?.onState((open) => {
+    // 메인 창: 패널 창 개폐/플라이/선택 배선 (panel-mode.ts)
+    initPanelBridge((open) => {
       panelOpen = open;
-      setPanelRelay(open);
-      // 열림 직후 현재 선택 동기화 — $effect는 값 변경에만 반응해서 패널이 나중에 열리면 못 받음
-      if (open) panelBridge?.select(ui.stationPanelCode);
-    });
-    panelBridge?.isOpen().then((open) => {
-      panelOpen = open;
-      setPanelRelay(open);
-    });
-    panelBridge?.onFlyTo((lonlat) => app.mapCtl?.flyTo({ center: lonlat, ...VIEW.stationFly }));
-    // 패널 창에서 고른 관측소 → 메인 선택 갱신 (릴레이 대상 + 오버레이가 따라옴)
-    panelBridge?.onSelect((code) => {
-      ui.stationPanelCode = code;
     });
     return () => destroyApp();
   });
@@ -110,7 +95,7 @@
       onSetRealtimeDataType={(t) => app.setRealtimeDataType(t)}
       onOpenTools={() => (showTools = true)}
       stationPanelOpen={panelOpen}
-      onToggleStationPanel={hasPanelBridge ? () => window.quakeBridge!.panel!.toggle() : undefined}
+      onToggleStationPanel={hasPanelBridge ? togglePanelWindow : undefined}
     />
 
     {#if showLegend}

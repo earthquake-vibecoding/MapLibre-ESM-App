@@ -1,12 +1,12 @@
 import { wolfxEewService } from './services/wolfx-eew.svelte';
-import { isActiveEEW } from './quake-utils';
-import { computeWaveState, type SeismicTable } from './seismic';
-import { fetchLatestTime, type RealtimeHost } from './realtime-img';
-import { clearDetectedEvents } from './grid';
+import { isActiveEEW } from './quake/quake-utils';
+import { computeWaveState, type SeismicTable } from './detect/seismic';
+import { fetchLatestTime, type RealtimeHost } from './detect/realtime-img';
+import { clearDetectedEvents } from './detect/grid';
 import { reportAlertStatus } from './electron-bridge';
 import { TIMING } from './config';
-import { accumulateExpiredEvent, finishDetectionEpisode } from './detection-log';
-import type { MapController } from './map-controller';
+import { accumulateExpiredEvent, finishDetectionEpisode } from './detect/detection-log';
+import type { MapController } from './map/map-controller';
 
 export interface TickerHost extends RealtimeHost {
   readonly seismicData: SeismicTable;

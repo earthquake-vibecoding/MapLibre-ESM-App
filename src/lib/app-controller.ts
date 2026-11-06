@@ -1,17 +1,17 @@
 import { ui, applyTheme, type Tab } from './state.svelte';
 import { p2pQuakeService } from './services/p2p-quake.svelte';
 import { wolfxEewService } from './services/wolfx-eew.svelte';
-import type { AreaData } from './area-data';
-import type { MapController } from './map-controller';
+import type { AreaData } from './quake/area-data';
+import type { MapController } from './map/map-controller';
 import type { Ticker } from './ticker';
-import { buildDetectedFeatures, loadDetectedEvents, saveDetectedEvents } from './grid';
-import { applyAreaIntensity } from './area-intensity';
-import { buildEpicenterFeatures, buildMockEew, isActiveEEW } from './quake-utils';
+import { buildDetectedFeatures, loadDetectedEvents, saveDetectedEvents } from './detect/grid';
+import { applyAreaIntensity } from './quake/area-intensity';
+import { buildEpicenterFeatures, buildMockEew, isActiveEEW } from './quake/quake-utils';
 import { focusActiveGrids, focusOnEarthquake, focusOnEew, focusOnEpicenter } from './focus';
-import { updateMaskLayer } from './est-shindo';
+import { updateMaskLayer } from './quake/est-shindo';
 import { soundService } from './services/sound';
 import { notificationService } from './services/notification.svelte';
-import { VIEW } from './config';
+import { VIEW, KEYS, SIM } from './config';
 
 export class AppController {
   mapCtl: MapController | null = null;
@@ -129,7 +129,7 @@ export class AppController {
     ui.isDarkMode = !ui.isDarkMode;
     applyTheme();
     try {
-      localStorage.setItem('quake_theme', ui.isDarkMode ? 'dark' : 'light');
+      localStorage.setItem(KEYS.theme, ui.isDarkMode ? 'dark' : 'light');
     } catch {
       // ignore
     }
@@ -149,7 +149,7 @@ export class AppController {
   setRealtimeDataType(type: 'jma_s' | 'jma_b'): void {
     ui.realtimeDataType = type;
     try {
-      localStorage.setItem('realtime_data_type', type);
+      localStorage.setItem(KEYS.dataType, type);
     } catch {
       // ignore
     }
@@ -184,12 +184,12 @@ export class AppController {
     if (ui.activeTab !== 'earthquake') this.setTab('earthquake');
     wolfxEewService.isEewDismissed = false;
     wolfxEewService.eewData = mockEew;
-    this.updateEpicenter({ earthquake: { hypocenter: { latitude: 35.5, longitude: 140.0 } } });
+    this.updateEpicenter({ earthquake: { hypocenter: { latitude: SIM.lat, longitude: SIM.lon } } });
     this.updateAreaIntensity(mockEew);
     this.updateVisibility();
     soundService.playShindoAudio(); // 실제 EEW와 동일 — Shindo.wav만
     notificationService.notifyEew(mockEew);
-    this.mapCtl?.flyTo({ center: [140.0, 35.5], ...VIEW.epicenterFly });
+    this.mapCtl?.flyTo({ center: [SIM.lon, SIM.lat], ...VIEW.epicenterFly });
   }
 }
 

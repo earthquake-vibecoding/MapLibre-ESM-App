@@ -1,8 +1,8 @@
 <script lang="ts">
   import { ui } from '../state.svelte';
   import { app } from '../app-controller';
-  import { getIntensityColor, getJindoString, jindoToScale } from '../jma-utils';
-  import { loadFavorites, saveFavorites, FAVORITES_KEY } from '../station-favorites';
+  import { getIntensityColor, getJindoString, jindoToScale } from '../quake/jma-utils';
+  import { loadFavorites, saveFavorites, FAVORITES_KEY } from '../quake/station-favorites';
   import { VIEW, DETECT, TIMING } from '../config';
   import Sparkline from './Sparkline.svelte';
 

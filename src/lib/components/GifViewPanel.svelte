@@ -1,7 +1,7 @@
 <script lang="ts">
   import { fade, scale } from 'svelte/transition';
   import type { EEWMessage } from '../models';
-  import { isActiveEEW } from '../quake-utils';
+  import { isActiveEEW } from '../quake/quake-utils';
   import { ui } from '../state.svelte';
 
   interface Props {

@@ -1,5 +1,5 @@
-import type { MapController } from './map-controller';
-import { isEewCoordValid } from './quake-utils';
+import type { MapController } from './map/map-controller';
+import { isEewCoordValid } from './quake/quake-utils';
 import { VIEW } from './config';
 
 export function focusActiveGrids(mapCtl: MapController | null, stationsState: Map<string, any>): boolean {
@@ -34,13 +34,9 @@ export function focusActiveGrids(mapCtl: MapController | null, stationsState: Ma
     });
   } else {
     mapCtl.fitBounds([
-      [minLon - 0.8, minLat - 0.8],
-      [maxLon + 0.8, maxLat + 0.8]
-    ], {
-      padding: 60,
-      maxZoom: 6.5,
-      duration: 1000
-    });
+      [minLon - VIEW.clusterBoundsPad, minLat - VIEW.clusterBoundsPad],
+      [maxLon + VIEW.clusterBoundsPad, maxLat + VIEW.clusterBoundsPad]
+    ], { ...VIEW.clusterFit });
   }
   return true;
 }
@@ -83,9 +79,8 @@ export function focusOnEarthquake(
     }
     if (minLon < maxLon && minLat < maxLat) {
       mapCtl.fitBounds([[minLon, minLat], [maxLon, maxLat]], {
-        padding: 80,
-        maxZoom: VIEW.fitMaxZoom,
-        duration: 1200
+        ...VIEW.quakeFit,
+        maxZoom: VIEW.fitMaxZoom
       });
       return;
     }

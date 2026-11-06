@@ -1,6 +1,6 @@
 import type { EEWMessage } from '../models';
 import { connectWithRetry, type WsRetryHandle } from './ws-connect';
-import { TIMING } from '../config';
+import { TIMING, NET } from '../config';
 
 export class WolfxEewService {
   eewData = $state<EEWMessage | null>(null);
@@ -11,7 +11,7 @@ export class WolfxEewService {
   connectWebSocket(onEewUpdate?: (eew: EEWMessage) => void) {
     if (typeof WebSocket === 'undefined') return;
     this.wsHandle?.disconnect();
-    this.wsHandle = connectWithRetry('wss://ws-api.wolfx.jp/jma_eew', {
+    this.wsHandle = connectWithRetry(NET.wolfxWs, {
       name: 'WolfX',
       onMessage: (data) => this.handleMessage(data, onEewUpdate)
     });

@@ -1,6 +1,6 @@
-import { playIntensitySound } from '../chime';
-import { playShindoSample, playDetectionSample, shindoSampleIndex } from '../sound-samples';
-import { jindoToScale } from '../jma-utils';
+import { playIntensitySound } from './chime';
+import { playShindoSample, playDetectionSample, shindoSampleIndex } from './sound-samples';
+import { jindoToScale } from '../quake/jma-utils';
 import { dbg } from '../debug';
 import { ALERT, DETECT, TIMING } from '../config';
 
@@ -139,7 +139,7 @@ export class SoundService {
         // 진도 알림음도 함께 플레이 (약간의 딜레이로 오버랩)
         setTimeout(() => {
           triggerScaleSound();
-        }, 200);
+        }, TIMING.soundOverlapMs);
       }
 
       if (playPromise !== undefined) {

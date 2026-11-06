@@ -1,7 +1,7 @@
 import type { P2PQuakeItem } from '../models';
-import { scaleToJmaString } from '../quake-utils';
+import { jmaShortAtLeast } from '../quake/jma-utils';
 import { connectWithRetry, type WsRetryHandle } from './ws-connect';
-import { TIMING } from '../config';
+import { TIMING, NET } from '../config';
 
 export class P2pQuakeService {
   p2pQuakeData = $state<P2PQuakeItem | null>(null);
@@ -34,7 +34,7 @@ export class P2pQuakeService {
 
   async fetchHistory(offset = 0): Promise<P2PQuakeItem[]> {
     try {
-      const res = await fetch(`https://api.p2pquake.net/v2/history?codes=551&limit=100&offset=${offset}`);
+      const res = await fetch(`${NET.p2pHistoryBase}${offset}`);
       if (res.ok) {
         const data: P2PQuakeItem[] = await res.json();
         if (Array.isArray(data) && data.length > 0) {
@@ -67,7 +67,7 @@ export class P2pQuakeService {
   ) {
     if (typeof WebSocket === 'undefined') return;
     this.wsHandle?.disconnect();
-    this.wsHandle = connectWithRetry('wss://api.p2pquake.net/v2/ws', {
+    this.wsHandle = connectWithRetry(NET.p2pWs, {
       name: 'P2P',
       onOpen: () => console.log('P2P WebSocket connected successfully'),
       onMessage: (data) => this.handleMessage(data, onNewQuake, onEewReceived)
@@ -107,7 +107,7 @@ export class P2pQuakeService {
         Longitude: data.earthquake?.hypocenter?.longitude || 0,
         Depth: data.earthquake?.hypocenter?.depth || 0,
         Magunitude: data.earthquake?.hypocenter?.magnitude || 0,
-        MaxIntensity: scaleToJmaString(maxScaleFrom),
+        MaxIntensity: jmaShortAtLeast(maxScaleFrom),
         areas: data.areas ?? [], // 예보구역 — buildAreaScaleMap이 이걸로 지역 색칠 (누락 시 EEW 지역 색칠이 죽음)
         isWarn: false,
         isCancel: false

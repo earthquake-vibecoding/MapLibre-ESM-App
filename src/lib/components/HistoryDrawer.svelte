@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { P2PQuakeItem, ProcessedHistoryItem } from '../models';
-  import { getJindoBadgeStyle } from '../jma-utils';
+  import { getJindoBadgeStyle } from '../quake/jma-utils';
 
   interface Props {
     historyList: P2PQuakeItem[];

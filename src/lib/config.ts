@@ -39,6 +39,36 @@ export const TIMING = {
   eewActiveWindowS: 240,   // EEW 활성 유지 시간
   eewFutureAllowS: 60,     // EEW 시작 시각 미래 여유
   simGuardMs: 120_000,     // 시뮬레이션 진행 중 실제 EEW 수신 차단 시간
+  soundOverlapMs: 200,     // 계급음 겹침 방지 지연 (triggerScaleSound)
+  estGifGuardMs: 8000,     // 예상진도 GIF 로드 타임아웃 가드
+  wsBaseMs: 5000,          // WS 재접속 초기 백오프
+  wsMaxMs: 30000,          // WS 재접속 최대 백오프
+  wsBackoff: 1.5,          // WS 재접속 백오프 배수
+} as const;
+
+/** 외부 API 엔드포인트 (server/api.mjs의 kmoni는 별도 node 프로세스라 여기와 무관) */
+export const NET = {
+  p2pHistoryBase: 'https://api.p2pquake.net/v2/history?codes=551&limit=100&offset=',
+  p2pWs: 'wss://api.p2pquake.net/v2/ws',
+  wolfxWs: 'wss://ws-api.wolfx.jp/jma_eew',
+  usgsFeed: 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson',
+} as const;
+
+/** localStorage 키 — 문자열 리터럴은 여기 외 금지 */
+export const KEYS = {
+  theme: 'quake_theme',
+  dataType: 'realtime_data_type',
+  alertFilter: 'alert_filter',
+  detected: 'eq_detected_stations',
+  notifyEnabled: 'browser_notifications_enabled',
+  favorites: 'station_favorites',
+  detectionLog: 'detection_log',
+} as const;
+
+/** EEW 시뮬레이션 진원 (임의의 후지산 인근 고정점) */
+export const SIM = {
+  lat: 35.5,
+  lon: 140.0,
 } as const;
 
 /** 알림음/알림 */
@@ -57,6 +87,10 @@ export const VIEW = {
   fitMaxZoom: 8,          // 진도 분포 fitBounds 상한
   focusStationZoom: 10.5, // 목록 관측소 포커스 줌
   focusStationMarkerMs: 7000, // 관측소 하이라이트 마커 유지 시간
+  clusterFit: { padding: 60, maxZoom: 6.5, duration: 1000 }, // 감지 격자 묶음 fitBounds
+  clusterBoundsPad: 0.8,  // 감지 격자 묶음 bounds 확장 (도)
+  quakeFit: { padding: 80, duration: 1200 }, // 진도 분포 fitBounds
+  fullFit: { padding: 48, pitch: 0, bearing: 0 }, // 전체 보기 공통 옵션 (duration은 호출부)
 } as const;
 
 /** 관측소 이웃 계산·감지 복구 (grid.ts) */

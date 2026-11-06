@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { P2PQuakeItem } from '../models';
-  import { getJindoBadgeStyle, getTsunamiText, getJindoString } from '../jma-utils';
-  import type { StationLocation } from '../map-marker';
+  import { getJindoBadgeStyle, getTsunamiText, getJindoString } from '../quake/jma-utils';
+  import type { StationLocation } from '../map/map-marker';
 
   interface Props {
     quake: P2PQuakeItem | null;

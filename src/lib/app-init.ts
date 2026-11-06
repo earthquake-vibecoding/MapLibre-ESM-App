@@ -1,14 +1,15 @@
 import { app } from './app-controller';
 import { ui } from './state.svelte';
 import { p2pQuakeService } from './services/p2p-quake.svelte';
-import { createMapController } from './map-controller';
-import { loadAreaData } from './area-data';
-import { loadStations } from './stations';
-import { fetchSeismicData } from './seismic';
+import { createMapController } from './map/map-controller';
+import { loadAreaData } from './quake/area-data';
+import { loadStations } from './quake/stations';
+import { fetchSeismicData } from './detect/seismic';
 import { Ticker } from './ticker';
-import { createFeedHandlers, startQuakeFeed, stopQuakeFeed } from './quake-feed';
+import { createFeedHandlers, startQuakeFeed, stopQuakeFeed } from './quake/quake-feed';
 import { usgsService } from './services/usgs.svelte';
 import { dbg } from './debug';
+import { KEYS } from './config';
 
 // HMR/리마운트 시 이전 initApp이 아직 await 중일 수 있음 — 시퀀스로 판별해 폐기
 let initSeq = 0;
@@ -23,7 +24,7 @@ export function destroyApp(): void {
 export async function initApp(container: HTMLElement): Promise<void> {
   const seq = ++initSeq;
   try {
-    const savedType = localStorage.getItem('realtime_data_type');
+    const savedType = localStorage.getItem(KEYS.dataType);
     if (savedType === 'jma_s' || savedType === 'jma_b') ui.realtimeDataType = savedType;
   } catch {
     // ignore

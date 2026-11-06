@@ -1,5 +1,5 @@
-import { scaleToJmaString } from '../quake-utils';
-import { TIMING } from '../config';
+import { jmaShortAtLeast } from '../quake/jma-utils';
+import { TIMING, KEYS } from '../config';
 
 export class NotificationService {
   permission = $state<NotificationPermission>('default');
@@ -9,7 +9,7 @@ export class NotificationService {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       this.permission = Notification.permission;
       try {
-        const savedEnabled = localStorage.getItem('browser_notifications_enabled');
+        const savedEnabled = localStorage.getItem(KEYS.notifyEnabled);
         if (savedEnabled !== null) {
           this.isEnabled = savedEnabled === 'true';
         }
@@ -58,7 +58,7 @@ export class NotificationService {
     this.isEnabled = enabled;
     if (typeof localStorage !== 'undefined') {
       try {
-        localStorage.setItem('browser_notifications_enabled', String(enabled));
+        localStorage.setItem(KEYS.notifyEnabled, String(enabled));
       } catch {
         // ignore
       }
@@ -122,7 +122,7 @@ export class NotificationService {
     const depth = quake.earthquake?.hypocenter?.depth;
     const depthStr = depth !== undefined && depth !== -1 ? `깊이 ${depth}km` : '';
     const maxScale = quake.earthquake?.maxScale;
-    const maxScaleStr = maxScale !== undefined && maxScale !== -1 ? `최대진도 ${scaleToJmaString(maxScale)}` : '';
+    const maxScaleStr = maxScale !== undefined && maxScale !== -1 ? `최대진도 ${jmaShortAtLeast(maxScale)}` : '';
 
     const title = `📢 신규 지진 정보`;
     const details = [name, magStr, depthStr, maxScaleStr].filter(Boolean).join(' | ');

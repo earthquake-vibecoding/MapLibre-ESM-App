@@ -1,4 +1,4 @@
-import { TIMING } from '../config';
+import { TIMING, NET } from '../config';
 
 /** USGS 글로벌 지진 — 해외지진 탭용 */
 export interface OverseasQuake {
@@ -12,7 +12,6 @@ export interface OverseasQuake {
 
 // 일본 본토+근해 — p2p 피드가 커버하므로 해외 목록에서 제외
 const JAPAN_BBOX = { lonMin: 123, lonMax: 146, latMin: 24, latMax: 46 };
-const FEED_URL = 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson';
 const MAX_ITEMS = 60;
 
 export class UsgsService {
@@ -21,7 +20,7 @@ export class UsgsService {
 
   async fetchLatest(): Promise<void> {
     try {
-      const res = await fetch(FEED_URL);
+      const res = await fetch(NET.usgsFeed);
       if (!res.ok) return;
       const feed: any = await res.json();
       const list: OverseasQuake[] = (feed?.features ?? [])

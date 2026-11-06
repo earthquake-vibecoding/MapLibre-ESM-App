@@ -3,6 +3,8 @@
  * 재접속은 setTimeout 기반 — 백그라운드 탭에서 rAF가 멈춰도 유지됨.
  */
 
+import { TIMING } from '../config';
+
 export interface WsRetryHandle {
   disconnect(): void;
 }
@@ -22,8 +24,8 @@ export function connectWithRetry(url: string, opts: WsRetryOpts): WsRetryHandle 
   let attempt = 0;
   let intentional = false;
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
-  const base = opts.baseDelay ?? 5000;
-  const max = opts.maxDelay ?? 30000;
+  const base = opts.baseDelay ?? TIMING.wsBaseMs;
+  const max = opts.maxDelay ?? TIMING.wsMaxMs;
 
   const connect = () => {
     if (typeof WebSocket === 'undefined') return;
@@ -51,7 +53,7 @@ export function connectWithRetry(url: string, opts: WsRetryOpts): WsRetryHandle 
     socket.onclose = () => {
       if (ws !== socket || intentional) return;
       ws = null;
-      const delay = Math.min(base * Math.pow(1.5, attempt), max);
+      const delay = Math.min(base * Math.pow(TIMING.wsBackoff, attempt), max);
       attempt++;
       console.log(`${opts.name} WebSocket disconnected. Reconnecting in ${Math.round(delay / 1000)}s...`);
       retryTimer = setTimeout(() => {

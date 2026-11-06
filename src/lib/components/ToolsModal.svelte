@@ -1,8 +1,8 @@
 <script lang="ts">
   import SoundPreview from './SoundPreview.svelte';
   import AlertFilterSettings from './AlertFilterSettings.svelte';
-  import { getDetectionLog, clearDetectionLog } from '../detection-log';
-  import { getIntensityColor, getJindoString, jindoToScale } from '../jma-utils';
+  import { getDetectionLog, clearDetectionLog } from '../detect/detection-log';
+  import { getIntensityColor, getJindoString, jindoToScale } from '../quake/jma-utils';
 
   interface Props {
     hasDetectedGrids: boolean;
