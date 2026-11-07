@@ -11,6 +11,9 @@ node_modules/
 !.env.example
 *.pem
 
+# Server runtime data (감지 기록 등)
+/data/
+
 # Logs & coverage
 *.log
 /coverage

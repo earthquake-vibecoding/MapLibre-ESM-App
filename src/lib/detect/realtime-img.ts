@@ -1,5 +1,6 @@
 import { ui } from '../state.svelte';
 import { processFrame } from './detector';
+import { updateDetectSnapshot } from './detect-snapshot';
 import { getJindoString, jindoToScale } from '../quake/jma-utils';
 import { soundService } from '../services/sound';
 import { notificationService } from '../services/notification.svelte';
@@ -84,6 +85,11 @@ function processRealtimeImage(time: string, host: RealtimeHost): void {
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
 
     const result = processFrame(imageData, canvas.width, canvas.height, geojson.features, host.stationsState, DETECT_ENABLED);
+
+    // 감지 중 프레임 보관(2초 스로틀) — 에피소드 종료 시 Discord 첨부용으로 회수
+    if (DETECT_ENABLED) {
+      updateDetectSnapshot(imageData, canvas.width, canvas.height, geojson.features, host.stationsState);
+    }
 
     if (result.soundJindo > -3) {
       const pass = alertFilterPasses(host.stationsState);

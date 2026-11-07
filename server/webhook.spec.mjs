@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  validateDetect, buildDetectEmbed, validateEew, buildEewEmbed, nextEewAction
+  validateDetect, buildDetectEmbed, validateEew, buildEewEmbed, nextEewAction, extractPngDataUrl
 } from './webhook.mjs';
 
 const detectBody = {
@@ -10,7 +10,8 @@ const detectBody = {
   maxJindo: 2.3,
   scaleLabel: '3',
   color: '#00BFFF',
-  center: [140.5, 36.1]
+  center: [140.5, 36.1],
+  top: { name: '大阪', region: '大阪府', jindo: 2.3 }
 };
 
 describe('detect 임베드', () => {
@@ -26,6 +27,20 @@ describe('detect 임베드', () => {
     expect(e.fields.some(f => f.value.includes('36.10'))).toBe(true);
   });
 
+  it('top 관측소/데이터 소스 필드 조립', () => {
+    const e = buildDetectEmbed(validateDetect(detectBody));
+    const topField = e.fields.find(f => f.name === '감지 격자 관측소');
+    expect(topField.value).toContain('大阪府 大阪');
+    expect(topField.value).toContain('2.3');
+    expect(e.fields.some(f => f.value === '강진모니터(K-moni)')).toBe(true);
+  });
+
+  it('top 누락 허용, 이름만 있으면 채택', () => {
+    expect(buildDetectEmbed(validateDetect({ ...detectBody, top: null })).fields.some(f => f.name === '감지 격자 관측소')).toBe(false);
+    const v = validateDetect({ ...detectBody, top: { name: 'X' } });
+    expect(buildDetectEmbed(v).fields.some(f => f.name === '감지 격자 관측소')).toBe(true);
+  });
+
   it('중심 좌표 누락 허용', () => {
     const v = validateDetect({ ...detectBody, center: undefined });
     expect(v?.center).toBeNull();
@@ -37,6 +52,21 @@ describe('detect 임베드', () => {
     expect(validateDetect(null)).toBeNull();
     const v = validateDetect({ ...detectBody, color: 'javascript:alert(1)' });
     expect(buildDetectEmbed(v).color).toBe(0x95a5a6);
+  });
+});
+
+describe('PNG 첨부 검증', () => {
+  const TINY_PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  it('유효 data URL → Buffer', () => {
+    const buf = extractPngDataUrl(`data:image/png;base64,${TINY_PNG}`);
+    expect(buf).toBeInstanceOf(Buffer);
+    expect(buf.length).toBeGreaterThan(0);
+  });
+  it('형식 위반/과대 용량 거부', () => {
+    expect(extractPngDataUrl('data:image/gif;base64,R0lGODlhAQABAAAAACw=')).toBeNull();
+    expect(extractPngDataUrl('javascript:alert(1)')).toBeNull();
+    expect(extractPngDataUrl(undefined)).toBeNull();
+    expect(extractPngDataUrl(`data:image/png;base64,${'A'.repeat(1_000_000)}`)).toBeNull();
   });
 });
 

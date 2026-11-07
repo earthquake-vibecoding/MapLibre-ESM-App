@@ -6,6 +6,12 @@
 
 import { KEYS } from '../config';
 
+export interface DetectionTopStation {
+  name: string;
+  region: string;
+  jindo: number; // 그 관측소 이벤트 최대 계측진도
+}
+
 export interface DetectionLogEntry {
   id: string;
   start: number;   // 에피소드 시작 시각 (첫 이벤트 startTime)
@@ -13,6 +19,7 @@ export interface DetectionLogEntry {
   maxJindo: number; // 에피소드 중 최대 계측진도
   count: number;   // 감지 관측소 수
   center: [number, number];
+  top?: DetectionTopStation | null; // 최대 진도 관측소 (웹후크 리포트용)
 }
 
 const KEY = KEYS.detectionLog;
@@ -21,7 +28,7 @@ const MAX_ENTRIES = 50;
 let episode = newEpisode();
 
 function newEpisode() {
-  return { start: Infinity, end: 0, maxJindo: -99, sumLon: 0, sumLat: 0, count: 0 };
+  return { start: Infinity, end: 0, maxJindo: -99, sumLon: 0, sumLat: 0, count: 0, top: null as DetectionTopStation | null };
 }
 
 /** 만료되는 관측소의 이벤트 정보 누적 (event가 지워지기 직전에 호출) */
@@ -30,6 +37,10 @@ export function accumulateExpiredEvent(stn: any): void {
   episode.count++;
   episode.start = Math.min(episode.start, stn.event.startTime ?? Infinity);
   episode.maxJindo = Math.max(episode.maxJindo, stn.event.maxJindo ?? stn.jindo ?? -99);
+  const evMax = stn.event.maxJindo ?? stn.jindo ?? -99;
+  if (stn.name && (!episode.top || evMax > episode.top.jindo)) {
+    episode.top = { name: stn.name, region: stn.region ?? '', jindo: evMax };
+  }
   if (stn.lonlat) {
     episode.sumLon += stn.lonlat[0];
     episode.sumLat += stn.lonlat[1];
@@ -46,7 +57,8 @@ export function finishDetectionEpisode(): DetectionLogEntry | null {
       end: Date.now(),
       maxJindo: episode.maxJindo,
       count: episode.count,
-      center: [episode.sumLon / episode.count, episode.sumLat / episode.count]
+      center: [episode.sumLon / episode.count, episode.sumLat / episode.count],
+      top: episode.top
     };
     const entries = getDetectionLog();
     entries.unshift(saved);

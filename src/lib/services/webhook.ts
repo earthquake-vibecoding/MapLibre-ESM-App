@@ -18,19 +18,26 @@ async function post(path: string, body: Record<string, unknown>): Promise<void> 
   }
 }
 
-/** 감지 에피소드 종료 리포트 — 에피소드 없으면 null, 진도1(WEBHOOK.minJindo) 미만 소음은 무시 */
-export function reportDetectionEpisode(e: DetectionLogEntry | null): void {
+/** 감지 에피소드 종료 리포트 — 에피소드 없으면 null, 진도1(WEBHOOK.minJindo) 미만 소음은 무시.
+ *  서버 기록(/api/history, 이미지 제외)과 Discord 릴레이(/api/webhook, 지도 스냅샷 첨부)가 독립이라
+ *  한쪽 실패가 다른 쪽을 막지 않음 */
+export function reportDetectionEpisode(e: DetectionLogEntry | null, snapshot: string | null): void {
   if (!e || e.maxJindo < WEBHOOK.minJindo) return;
   const scale = jindoToScale(e.maxJindo);
-  void post('/api/webhook/detect', {
+  const body = {
     start: e.start,
     end: e.end,
     count: e.count,
     center: e.center,
     maxJindo: Math.round(e.maxJindo * 10) / 10,
     scaleLabel: getJindoString(scale),
-    color: getIntensityColor(scale)
-  });
+    color: getIntensityColor(scale),
+    top: e.top
+      ? { name: e.top.name, region: e.top.region, jindo: Math.round(e.top.jindo * 10) / 10 }
+      : null
+  };
+  void post('/api/history/detect', body);
+  void post('/api/webhook/detect', snapshot ? { ...body, image: snapshot } : body);
 }
 
 /** EEW 수신 리포트 — 취소보/시뮬레이션 제외 (호출부 funnel 게이트와 동일 기준) */

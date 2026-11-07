@@ -4,7 +4,7 @@
 import express from 'express';
 
 const app = express();
-app.use(express.json({ limit: '8kb' }));
+app.use(express.json({ limit: '1mb' })); // 감지 리포트는 kmoni 프레임 PNG(base64)를 동반할 수 있음
 
 const DETECT_COOLDOWN_MS = 60_000;
 const EEW_COOLDOWN_MS = 5_000;
@@ -52,17 +52,37 @@ export function validateDetect(b) {
     center,
     scaleLabel: str(b.scaleLabel, 8) ?? '불명',
     color: hexColor(b.color, 0x95a5a6),
+    top: validTop(b.top)
   };
 }
 
+function validTop(t) {
+  if (!t || typeof t !== 'object') return null;
+  const name = str(t.name, 60);
+  if (!name) return null;
+  return { name, region: str(t.region, 60) ?? '', jindo: num(t.jindo) };
+}
+
+/** "data:image/png;base64,…" 검증 → Buffer. 크기 상한 700KB, 이외는 null(첨부 없이 진행) */
+export function extractPngDataUrl(v) {
+  const m = typeof v === 'string' ? /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(v) : null;
+  if (!m) return null;
+  const buf = Buffer.from(m[1], 'base64');
+  return buf.length > 0 && buf.length <= 700_000 ? buf : null;
+}
+
 export function buildDetectEmbed(v) {
-  const fields = [
-    { name: '최대 진도', value: `**${v.scaleLabel}** (계측 ${v.maxJindo.toFixed(1)})`, inline: true },
-    { name: '감지 관측소', value: `${v.count}개소`, inline: true },
-  ];
+  const fields = [];
+  if (v.top) {
+    const topValue = `${v.top.region} ${v.top.name}${v.top.jindo !== null ? ` 계측 ${v.top.jindo.toFixed(1)}` : ''}`.trim();
+    fields.push({ name: '감지 격자 관측소', value: topValue, inline: false });
+  }
+  fields.push({ name: '최대 진도', value: `**${v.scaleLabel}** (계측 ${v.maxJindo.toFixed(1)})`, inline: true });
+  fields.push({ name: '데이터 소스', value: '강진모니터(K-moni)', inline: true });
   if (v.center) {
     fields.push({ name: '중심(위도, 경도)', value: `${v.center[1].toFixed(2)}, ${v.center[0].toFixed(2)}`, inline: true });
   }
+  fields.push({ name: '감지 관측소', value: `${v.count}개소`, inline: true });
   fields.push({ name: '시각 (JST)', value: `${jstHms(v.start)} ~ ${jstHms(v.end)}`, inline: false });
   return {
     title: '🚨 흔들림 감지',
@@ -111,14 +131,14 @@ export function nextEewAction(last, originTime) {
   return last && last.originTime === originTime ? 'patch' : 'post';
 }
 
-async function requestDiscord(url, method, payload, wait) {
+async function requestDiscord(url, method, body, wait) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 5000);
   try {
     const res = await fetch(wait ? `${url}?wait=true` : url, {
       method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body,
+      headers: body instanceof FormData ? {} : { 'Content-Type': 'application/json' },
       signal: controller.signal,
     });
     if (!res.ok) return null;
@@ -138,10 +158,21 @@ app.post('/detect', async (req, res) => {
   if (!process.env.WEBHOOK_URL) return disabled(res);
   const body = validateDetect(req.body);
   if (!body) return res.status(400).json({ error: 'Invalid payload' });
+  const image = extractPngDataUrl(req.body?.image);
   const now = Date.now();
   if (now < detectCooldownUntil) return disabled(res);
   detectCooldownUntil = now + DETECT_COOLDOWN_MS;
-  const ok = await requestDiscord(process.env.WEBHOOK_URL, 'POST', { embeds: [buildDetectEmbed(body)] }, false);
+  const embed = buildDetectEmbed(body);
+  let payload;
+  if (image) {
+    embed.image = { url: 'attachment://map.png' };
+    payload = new FormData();
+    payload.append('payload_json', JSON.stringify({ embeds: [embed] }));
+    payload.append('files[0]', new Blob([image], { type: 'image/png' }), 'map.png');
+  } else {
+    payload = JSON.stringify({ embeds: [embed] });
+  }
+  const ok = await requestDiscord(process.env.WEBHOOK_URL, 'POST', payload, false);
   res.status(ok ? 204 : 502).end();
 });
 
@@ -154,11 +185,11 @@ app.post('/eew', async (req, res) => {
   eewCooldownUntil = now + EEW_COOLDOWN_MS;
   const embed = buildEewEmbed(body);
   if (nextEewAction(lastEewMessage, body.originTime) === 'patch') {
-    const ok = await requestDiscord(process.env.WEBHOOK_URL, 'PATCH', { embeds: [embed] }, false);
+    const ok = await requestDiscord(process.env.WEBHOOK_URL, 'PATCH', JSON.stringify({ embeds: [embed] }), false);
     if (!ok) lastEewMessage = null; // 메시지 삭제 등 실패 시 다음 보는 새 메시지로
     return res.status(ok ? 204 : 502).end();
   }
-  const sent = await requestDiscord(process.env.WEBHOOK_URL, 'POST', { embeds: [embed] }, true);
+  const sent = await requestDiscord(process.env.WEBHOOK_URL, 'POST', JSON.stringify({ embeds: [embed] }), true);
   if (sent?.id && /^\d+$/.test(String(sent.id))) {
     lastEewMessage = { id: sent.id, originTime: body.originTime };
   }

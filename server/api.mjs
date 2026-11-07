@@ -4,6 +4,7 @@ import express from 'express';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import webhookApp from './webhook.mjs';
+import historyApp from './history.mjs';
 
 const app = express();
 const TJMA_PATH = fileURLToPath(new URL('../tjma2020a.-00000', import.meta.url));
@@ -190,5 +191,8 @@ app.get('/estshindo-img', (req, res) => {
 
 // Discord 웹후크 릴레이 — /api/webhook/{detect,eew} (server/webhook.mjs, 전역 레이트 리밋 공유)
 app.use('/webhook', webhookApp);
+
+// 감지 기록 저장소 — /api/history (GET 목록, POST /detect 적재)
+app.use('/history', historyApp);
 
 export default app;
