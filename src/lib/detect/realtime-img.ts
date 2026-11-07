@@ -37,9 +37,11 @@ export async function fetchLatestTime(host: RealtimeHost): Promise<void> {
           if (data && data.latest_time) {
             ui.latestTime = data.latest_time;
 
-            // 강진 모니터 데이터 지연 대응: 타임스탬프에서 지정 초를 뺀다.
+            // 강진 모니터 데이터 지연 대응 — 서버 폴러가 적응한 발행 지연(optimal_delay_ms)을 따라간다.
+            // 버퍼 최신 프레임보다 1초 뒤 시각이 되어 서버 프레임 버퍼 히트가 보장된다 (폴러 없으면 기존 2초).
+            const lagS = Math.max(1, Math.round((Number(data.optimal_delay_ms) || TIMING.kmoniLagS * 1000) / 1000));
             const dateObj = new Date(data.latest_time.replace(/\//g, '-'));
-            dateObj.setSeconds(dateObj.getSeconds() - TIMING.kmoniLagS);
+            dateObj.setSeconds(dateObj.getSeconds() - lagS);
 
             const pad = (n: number) => n.toString().padStart(2, '0');
             const timeStr = `${dateObj.getFullYear()}${pad(dateObj.getMonth() + 1)}${pad(dateObj.getDate())}${pad(dateObj.getHours())}${pad(dateObj.getMinutes())}${pad(dateObj.getSeconds())}`;

@@ -1,15 +1,19 @@
 // kmoni(기상청 강진모니터링) 프록시 API — dev(vite middleware)/prod(express) 공용
 // 주의: Router 대신 mini express app을 export해야 connect에서 res.json 등 augment가 동작함
+// 프레임은 server/frame-buffer.mjs의 백그라운드 폴러가 미리 수신한 버퍼 우선, 미스 시 on-demand fetch.
 import express from 'express';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import webhookApp from './webhook.mjs';
 import historyApp from './history.mjs';
+import { kmoniImgUrl } from './kmoni-poll.mjs';
+import { getFrameBuffer, startKmoniPoller } from './frame-buffer.mjs';
 
 const app = express();
 const TJMA_PATH = fileURLToPath(new URL('../tjma2020a.-00000', import.meta.url));
+const buffer = getFrameBuffer();
+startKmoniPoller(); // 백그라운드 1Hz 폴러 — jma_s 프레임 선수신으로 감지 경로 504 제거
 
-const KMONI = 'http://www.kmoni.bosai.go.jp';
 const TRANSPARENT_GIF = Buffer.from(
   'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
   'base64'
@@ -61,36 +65,23 @@ function validTime(req, res) {
   return time;
 }
 
-// 짧은 이미지 캐시 — 렌더러 1초 폴링마다 kmoni를 두드리지 않게 (지연 504 완화)
-const IMG_CACHE_MS = 1500;
-const imgCache = new Map(); // url -> { at, type, buf }
-
-function sendCached(res, url) {
-  const hit = imgCache.get(url);
-  if (!hit || Date.now() - hit.at >= IMG_CACHE_MS) return false;
-  res.setHeader('Content-Type', hit.type);
-  res.send(hit.buf);
-  return true;
-}
-
-function storeImage(url, type, buf) {
-  const now = Date.now();
-  for (const [k, v] of imgCache) {
-    if (now - v.at >= IMG_CACHE_MS) imgCache.delete(k);
+/** 버퍼 hit → 즉시 서빙, miss → on-demand fetch 후 버퍼 적재. 폴러가 받지 않는 kind(acmap/eew)도 이 경로로 캐시됨 */
+async function sendImage(res, time, kind, fallback) {
+  const hit = buffer.get(time, kind);
+  if (hit) {
+    res.setHeader('Content-Type', hit.type);
+    res.setHeader('X-Frame-Source', 'buffer');
+    res.send(hit.buf);
+    return;
   }
-  if (imgCache.size >= 12) imgCache.delete(imgCache.keys().next().value);
-  imgCache.set(url, { at: now, type, buf });
-}
-
-async function sendImage(res, url, fallback) {
-  if (sendCached(res, url)) return;
   try {
-    const response = await fetchWithTimeout(url);
+    const response = await fetchWithTimeout(kmoniImgUrl(time, kind));
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const buffer = Buffer.from(await response.arrayBuffer());
-    storeImage(url, 'image/gif', buffer);
+    const buf = Buffer.from(await response.arrayBuffer());
+    buffer.put(time, kind, buf);
     res.setHeader('Content-Type', 'image/gif');
-    res.send(buffer);
+    res.setHeader('X-Frame-Source', 'fetch');
+    res.send(buf);
   } catch {
     if (fallback) {
       res.setHeader('Content-Type', 'image/gif');
@@ -129,64 +120,51 @@ app.get('/seismic-data', (req, res) => {
   }
 });
 
-app.get('/latest-time', async (req, res) => {
-  try {
-    const response = await fetchWithTimeout(`${KMONI}/webservice/server/pros/latest.json`);
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const text = (await response.text()).trim();
-    if (!text.startsWith('{')) throw new Error('Invalid JSON response body from kmoni');
-    res.json(JSON.parse(text));
-  } catch {
-    // kmoni 연결 타임아웃/실패 시 JST 현재 시각(-2초) fallback
-    const nowJST = new Date(Date.now() + 9 * 60 * 60 * 1000 - 2000);
-    const p = (n) => String(n).padStart(2, '0');
-    const y = nowJST.getUTCFullYear();
-    const mm = p(nowJST.getUTCMonth() + 1);
-    const dd = p(nowJST.getUTCDate());
-    const hh = p(nowJST.getUTCHours());
-    const mi = p(nowJST.getUTCMinutes());
-    const ss = p(nowJST.getUTCSeconds());
-    res.json({
-      security_time: `${y}${mm}${dd}${hh}${mi}${ss}`,
-      latest_time: `${y}/${mm}/${dd} ${hh}:${mi}:${ss}`,
-      fallback: true,
-    });
-  }
+// latest.json은 폴러가 1Hz로 수신한 캐시를 서빙 (요청마다 kmoni 두드리지 않음)
+// optimal_delay_ms: 폴러가 적응한 발행 지연 — 클라이언트가 이 만큼을 latest_time에서 빼 요청해야 버퍼에 항상 있음
+app.get('/latest-time', (req, res) => {
+  const cached = buffer.getLatestJson();
+  if (cached) return res.json({ ...cached, optimal_delay_ms: buffer.getOptimalDelay() });
+  const delayMs = buffer.getOptimalDelay();
+  // 폴러 캐시 없음(기동 직후/kmoni 장애) → JST 현재 시각(-2초) fallback
+  const nowJST = new Date(Date.now() + 9 * 60 * 60 * 1000 - 2000);
+  const p = (n) => String(n).padStart(2, '0');
+  const y = nowJST.getUTCFullYear();
+  const mm = p(nowJST.getUTCMonth() + 1);
+  const dd = p(nowJST.getUTCDate());
+  const hh = p(nowJST.getUTCHours());
+  const mi = p(nowJST.getUTCMinutes());
+  const ss = p(nowJST.getUTCSeconds());
+  res.json({
+    security_time: `${y}${mm}${dd}${hh}${mi}${ss}`,
+    latest_time: `${y}/${mm}/${dd} ${hh}:${mi}:${ss}`,
+    fallback: true,
+    optimal_delay_ms: delayMs,
+  });
 });
-
-function kmoniRealtimeImgUrl(time, type) {
-  const dateStr = time.substring(0, 8);
-  return `${KMONI}/data/map_img/RealTimeImg/${type}/${dateStr}/${time}.${type}.gif`;
-}
-function kmoniEewImgUrl(time, kind) {
-  const dateStr = time.substring(0, 8);
-  return `${KMONI}/data/map_img/${kind}/eew/${dateStr}/${time}.eew.gif`;
-}
 
 app.get('/acmap-img', (req, res) => {
   const time = validTime(req, res);
   if (!time) return;
-  const type = req.query['type'] === 'jma_b' ? 'acmap_b' : 'acmap_s';
-  sendImage(res, kmoniRealtimeImgUrl(time, type), false);
+  sendImage(res, time, req.query['type'] === 'jma_b' ? 'acmap_b' : 'acmap_s', false);
 });
 
 app.get('/realtime-img', (req, res) => {
   const time = validTime(req, res);
   if (!time) return;
-  const imgType = req.query['type'] === 'jma_b' ? 'jma_b' : 'jma_s';
-  sendImage(res, kmoniRealtimeImgUrl(time, imgType), false);
+  sendImage(res, time, req.query['type'] === 'jma_b' ? 'jma_b' : 'jma_s', false);
 });
 
 app.get('/pswave-img', (req, res) => {
   const time = validTime(req, res);
   if (!time) return;
-  sendImage(res, kmoniEewImgUrl(time, 'PSWaveImg'), true);
+  sendImage(res, time, 'PSWaveImg', true);
 });
 
 app.get('/estshindo-img', (req, res) => {
   const time = validTime(req, res);
   if (!time) return;
-  sendImage(res, kmoniEewImgUrl(time, 'EstShindoImg'), true);
+  sendImage(res, time, 'EstShindoImg', true);
 });
 
 // Discord 웹후크 릴레이 — /api/webhook/{detect,eew} (server/webhook.mjs, 전역 레이트 리밋 공유)
