@@ -19,7 +19,8 @@ export interface RealtimeHost {
   readonly geojson: any | null;
   readonly stationsState: Map<string, any>;
   readonly mapCtl: MapController | null;
-  updateEstShindoMask(): void;
+  // [GIF 파서 비활성] 복구 시: 아래 멤버 + 호출부 주석 해제 (app-controller 참고)
+  // updateEstShindoMask(): void;
   updateDetectedEvents(): void;
 }
 
@@ -67,9 +68,10 @@ function processRealtimeImage(time: string, host: RealtimeHost): void {
   ui.acmapGifUrl = `/api/acmap-img?time=${time}&type=${dataType}`;
   ui.estshindoGifUrl = `/api/estshindo-img?time=${time}`;
 
-  if (ui.activeTab === 'realtime') {
-    host.updateEstShindoMask(); // EEW 중에만 실갱신, 아니면 clear (app-controller 게이트)
-  }
+  // [GIF 파서 비활성] 마스크 갱신은 ticker.updateWaves(로컬 계산)가 담당 — 복구 시 주석 해제
+  // if (ui.activeTab === 'realtime') {
+  //   host.updateEstShindoMask();
+  // }
 
   img.onload = () => {
     if (reqId !== latestImgReq) return; // 더 최신 프레임 요청이 있으면 폐기

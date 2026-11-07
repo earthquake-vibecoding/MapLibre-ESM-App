@@ -13,12 +13,16 @@ export interface TickerHost extends RealtimeHost {
   updateVisibility(): void;
   updateEpicenter(): void;
   updateDetectedEvents(): void;
+  /** EEW 예상진도 마스크 — 로컬 계산 전체 색칠 (500ms 스로틀, 시그니처 dedup) */
+  updateEstShindoLocal(): void;
+  clearEstShindoMask(): void;
 }
 
 export class Ticker {
   private animationId: number | null = null;
   private heartbeatId: ReturnType<typeof setInterval> | null = null;
   private lastWaveRenderTime = 0;
+  private lastMaskRenderTime = 0;
   private wavesActive = false;
 
   constructor(private host: TickerHost) {}
@@ -118,6 +122,7 @@ export class Ticker {
         this.wavesActive = false;
         mapCtl.setSource('p-wave', wave.pFc);
         mapCtl.setSource('s-wave', wave.sFc);
+        this.host.clearEstShindoMask(); // 예상진도 마스크 잔상 제거
       }
       return;
     }
@@ -133,5 +138,11 @@ export class Ticker {
     mapCtl.setWavePaint(wave.pFade, wave.sFade);
     mapCtl.setSource('p-wave', wave.pFc);
     mapCtl.setSource('s-wave', wave.sFc);
+
+    // 예상진도 마스크: EEW 수신 즉시 전체 분포 색칠 — 파 링(33ms)보다 낮은 주기로 갱신
+    if (eew && now - this.lastMaskRenderTime >= TIMING.maskThrottleMs) {
+      this.lastMaskRenderTime = now;
+      this.host.updateEstShindoLocal();
+    }
   }
 }

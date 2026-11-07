@@ -3,7 +3,7 @@ import { wolfxEewService } from '../services/wolfx-eew.svelte';
 import { notificationService } from '../services/notification.svelte';
 import { soundService } from '../services/sound';
 import { ui } from '../state.svelte';
-import { getQuakeUniqueKey } from './quake-utils';
+import { getQuakeUniqueKey, isUnknownQuake } from './quake-utils';
 import { focusOnEarthquake } from '../focus';
 import { TIMING } from '../config';
 import type { AppController } from '../app-controller';
@@ -38,10 +38,13 @@ export function createFeedHandlers(c: AppController): QuakeFeedHandlers {
 }
 
 function handleNewQuake(c: AppController, data: any): void {
-  // Shindo.wav만 — 진도음 계급은 p2p 소식 진도값이 아니라 실시간 감지(playShakeDetected)가 담당
-  soundService.playShindoAudio();
-  notificationService.notifyQuake(data);
-  c.setTab('earthquake');
+  // ScalePrompt(확정 전 진도속보)·진원지 미상은 소리/알림/탭 전환 생략 — 상세 통보(DetailScale)가 이어서 오므로 그때 울림
+  if (!isUnknownQuake(data)) {
+    // Shindo.wav만 — 진도음 계급은 p2p 소식 진도값이 아니라 실시간 감지(playShakeDetected)가 담당
+    soundService.playShindoAudio();
+    notificationService.notifyQuake(data);
+    c.setTab('earthquake');
+  }
   c.updateEpicenter(data);
   c.updateAreaIntensity(data);
   focusOnEarthquake(c.mapCtl, data, c.areaData?.areaForecastGeoJSON);
@@ -49,6 +52,12 @@ function handleNewQuake(c: AppController, data: any): void {
 
 function handleEew(c: AppController, mappedEew: any): void {
   if (!mappedEew) return;
+  // 취소 보고 — 소리/알림/지도 갱신 없이 무시. 서비스가 넣은 eewData는 ticker의 !isActiveEEW 경로가 정리(파 링·마스크·배너)
+  if (mappedEew.isCancel) return;
+  // 시뮬레이션 진행 중 실제 수신 차단 — wolfx 서비스 가드가 p2p 경로를 못 막으므로 공용 funnel에서도 검사
+  const current = wolfxEewService.eewData;
+  if (current?.isSimulation && Date.now() - (current.simulationStartTime || 0) < TIMING.simGuardMs) return;
+
   const eewKey = `${mappedEew.AnnouncedTime || ''}_${mappedEew.OriginTime || ''}_${mappedEew.Hypocenter || ''}_${mappedEew.MaxIntensity || ''}`;
   const now = Date.now();
 

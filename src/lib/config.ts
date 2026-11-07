@@ -26,6 +26,7 @@ export const TIMING = {
   heartbeatMs: 1000,       // kmoni 프레임 폴링 (ticker)
   blinkMs: 500,            // 감지 격자 점멸 주기
   waveThrottleMs: 33,      // P/S파 렌더 스로틀 (≈30fps)
+  maskThrottleMs: 500,     // 예상진도 마스크 갱신 스로틀 (로컬 계산)
   relayMs: 500,            // 메인 → 외부 패널 스냅샷 릴레이
   panelSnapMs: 500,        // 패널 UI 스냅샷 갱신
   quakePollMs: 20_000,     // P2PQuake 이력 폴링

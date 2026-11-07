@@ -84,12 +84,14 @@ export class MapController {
       if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', vis(showAreas));
     }
 
-    // 예상진도 행정구역 마스킹 레이어 — 실시간 탭에서 EEW 중에만 소스가 채워짐 (est-shindo.ts)
+    // 예상진도 마스크 — 실시간 탭 상시 + EEW 중엔 어느 탭에서든 (파 링과 동일 패턴).
+    // EEW 중이 아니면 소스가 비어 표시되지 않음 (ticker가 클리어 유지)
+    const maskVis = isRealtimeTab || s.eewActive;
     if (map.getLayer('est-shindo-mask-fill')) {
-      map.setLayoutProperty('est-shindo-mask-fill', 'visibility', vis(isRealtimeTab));
+      map.setLayoutProperty('est-shindo-mask-fill', 'visibility', vis(maskVis));
     }
     if (map.getLayer('est-shindo-mask-line')) {
-      map.setLayoutProperty('est-shindo-mask-line', 'visibility', vis(isRealtimeTab));
+      map.setLayoutProperty('est-shindo-mask-line', 'visibility', vis(maskVis));
     }
 
     // 관측점 레이어: 지진 예보구역 탭 외 표시
