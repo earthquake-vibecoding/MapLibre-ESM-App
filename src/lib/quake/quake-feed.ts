@@ -1,6 +1,7 @@
 import { p2pQuakeService } from '../services/p2p-quake.svelte';
 import { wolfxEewService } from '../services/wolfx-eew.svelte';
 import { notificationService } from '../services/notification.svelte';
+import { reportEew } from '../services/webhook';
 import { soundService } from '../services/sound';
 import { ui } from '../state.svelte';
 import { getQuakeUniqueKey, isUnknownQuake } from './quake-utils';
@@ -71,6 +72,7 @@ function handleEew(c: AppController, mappedEew: any): void {
     // Shindo.wav만 — 진도음 계급은 예보(MaxIntensity)가 아니라 실측 감지가 담당
     soundService.playShindoAudio();
     notificationService.notifyEew(mappedEew);
+    reportEew(mappedEew); // Discord 웹후크 — 취소/시뮬 게이트를 이 funnel과 공유
   }
   c.updateEpicenter();
   // 예보 구역/지점이 있을 때만 색칠 — areas 없는 EEW(wolfx)가 기존 지진 탭 색을 지우지 않게 (원본은 EEW에서 색칠 안 함)

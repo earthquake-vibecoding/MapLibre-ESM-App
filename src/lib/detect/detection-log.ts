@@ -36,21 +36,24 @@ export function accumulateExpiredEvent(stn: any): void {
   }
 }
 
-/** 모든 감지가 끝난 순간 에피소드 1건 기록 */
-export function finishDetectionEpisode(): void {
+/** 모든 감지가 끝난 순간 에피소드 1건 기록. 기록한 엔트리 반환(웹후크 리포트용), 에피소드가 없으면 null */
+export function finishDetectionEpisode(): DetectionLogEntry | null {
+  let saved: DetectionLogEntry | null = null;
   if (episode.count > 0 && episode.maxJindo > -99) {
-    const entries = getDetectionLog();
-    entries.unshift({
+    saved = {
       id: String(episode.start),
       start: episode.start === Infinity ? Date.now() : episode.start,
       end: Date.now(),
       maxJindo: episode.maxJindo,
       count: episode.count,
       center: [episode.sumLon / episode.count, episode.sumLat / episode.count]
-    });
+    };
+    const entries = getDetectionLog();
+    entries.unshift(saved);
     saveLog(entries.slice(0, MAX_ENTRIES));
   }
   episode = newEpisode();
+  return saved;
 }
 
 export function getDetectionLog(): DetectionLogEntry[] {

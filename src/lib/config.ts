@@ -77,6 +77,11 @@ export const ALERT = {
   shindoVolume: 0.85,      // Shindo.wav 볼륨
 } as const;
 
+/** 웹후크 리포트 (services/webhook.ts → server/webhook.mjs → Discord) */
+export const WEBHOOK = {
+  minJindo: 0.5,           // 감지 에피소드 리포트 최소 최대계측진도 (진도1 미만 무시)
+} as const;
+
 /** 카메라 이동 (키는 maplibre flyTo 옵션명 그대로 — spread로 사용) */
 export const VIEW = {
   stationFly: { zoom: 7, duration: 800 },            // 관측소 1개 플라이 (패널·감지 기록 공용)

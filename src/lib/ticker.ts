@@ -6,6 +6,7 @@ import { clearDetectedEvents } from './detect/grid';
 import { reportAlertStatus } from './electron-bridge';
 import { TIMING } from './config';
 import { accumulateExpiredEvent, finishDetectionEpisode } from './detect/detection-log';
+import { reportDetectionEpisode } from './services/webhook';
 import type { MapController } from './map/map-controller';
 
 export interface TickerHost extends RealtimeHost {
@@ -95,7 +96,8 @@ export class Ticker {
     }
     if (expired) {
       if (activeCount === 0) {
-        finishDetectionEpisode(); // 에피소드 종료 → 감지 기록 1건
+        const entry = finishDetectionEpisode(); // 에피소드 종료 → 감지 기록 1건
+        reportDetectionEpisode(entry);          // 진도1 이상이면 Discord 웹후크 (서버 릴레이)
         // 카메라만 전체 보기 복귀 (원본 동작) — 클린모드 진입은 전체보기 버튼 전용
         this.host.mapCtl?.fitFullView(800);
         clearDetectedEvents();
