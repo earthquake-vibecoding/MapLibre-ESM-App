@@ -110,7 +110,8 @@ interface ColorMapItem {
 
 const colorMap = colorMapData as ColorMapItem[];
 
-export function getJindoFromColor(r: number, g: number, b: number): number {
+/** 최근접 팔레트 색 매칭. 거리가 maxDist를 넘으면 null (안티앨리어싱/혼색 픽셀 거름) */
+export function getJindoFromColorStrict(r: number, g: number, b: number, maxDist = 48): number | null {
   if (r < 15 && g < 15 && b < 15) return -3;
 
   let minDistance = Infinity;
@@ -128,5 +129,9 @@ export function getJindoFromColor(r: number, g: number, b: number): number {
     }
   }
 
-  return matchedJindo;
+  return minDistance <= maxDist * maxDist ? matchedJindo : null;
+}
+
+export function getJindoFromColor(r: number, g: number, b: number): number {
+  return getJindoFromColorStrict(r, g, b, Infinity) ?? -3;
 }

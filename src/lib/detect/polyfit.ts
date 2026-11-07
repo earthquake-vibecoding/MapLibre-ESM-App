@@ -87,7 +87,8 @@ export class PolyProj {
     return Coeff;
   }
 
-  toPixel(lon: number, lat: number): { x: number; y: number } | null {
+  /** (lon, lat) → 픽셀 좌표(float). 미학습 시 null. 범위 클리핑은 호출부(라스터라이저) 담당 */
+  toPixelF(lon: number, lat: number): { x: number; y: number } | null {
     if (this.coeffX.length < 6 || this.coeffY.length < 6) return null;
 
     const terms = [1, lon, lat, lon * lat, lon * lon, lat * lat];
@@ -99,82 +100,6 @@ export class PolyProj {
       py += this.coeffY[i] * terms[i];
     }
 
-    const rx = Math.round(px);
-    const ry = Math.round(py);
-
-    if (rx < 0 || rx >= 352 || ry < 0 || ry >= 400) return null;
-    return { x: rx, y: ry };
+    return { x: px, y: py };
   }
-}
-
-/**
- * 각 예보구역 폴리곤별 픽셀 샘플 Lookup Table 생성.
- */
-export function buildLUT(features: any[], proj: PolyProj): Map<string, { x: number; y: number }[]> {
-  const lut = new Map<string, { x: number; y: number }[]>();
-
-  for (const feature of features) {
-    const code = feature.properties?.code;
-    if (!code) continue;
-
-    const pixels: { x: number; y: number }[] = [];
-    const pixelSet = new Set<string>();
-
-    const addPixel = (lon: number, lat: number) => {
-      const p = proj.toPixel(lon, lat);
-      if (p) {
-        const key = `${p.x},${p.y}`;
-        if (!pixelSet.has(key)) {
-          pixelSet.add(key);
-          pixels.push(p);
-        }
-      }
-    };
-
-    const processCoordinates = (coords: any) => {
-      if (!Array.isArray(coords) || coords.length === 0) return;
-
-      if (typeof coords[0] === 'number') {
-        addPixel(coords[0], coords[1]);
-        return;
-      }
-
-      let minLon = 180, maxLon = -180, minLat = 90, maxLat = -90;
-
-      for (const pt of coords) {
-        if (Array.isArray(pt) && typeof pt[0] === 'number') {
-          const lon = pt[0];
-          const lat = pt[1];
-          addPixel(lon, lat);
-
-          if (lon < minLon) minLon = lon;
-          if (lon > maxLon) maxLon = lon;
-          if (lat < minLat) minLat = lat;
-          if (lat > maxLat) maxLat = lat;
-        } else if (Array.isArray(pt)) {
-          processCoordinates(pt);
-        }
-      }
-
-      // bbox가 유효하면 내부 그리드 샘플링
-      if (minLon < maxLon && minLat < maxLat) {
-        const lonStep = Math.max(0.04, (maxLon - minLon) / 5);
-        const latStep = Math.max(0.04, (maxLat - minLat) / 5);
-
-        for (let lon = minLon; lon <= maxLon; lon += lonStep) {
-          for (let lat = minLat; lat <= maxLat; lat += latStep) {
-            addPixel(lon, lat);
-          }
-        }
-      }
-    };
-
-    if (feature.geometry && feature.geometry.coordinates) {
-      processCoordinates(feature.geometry.coordinates);
-    }
-
-    lut.set(code, pixels);
-  }
-
-  return lut;
 }

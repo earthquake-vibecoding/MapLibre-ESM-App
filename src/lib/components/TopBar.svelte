@@ -17,9 +17,8 @@
 
   let { activeTab, historyCount, historyOpen, latestTime, isDarkMode, notificationPermission, notificationEnabled, onTabChange, onToggleHistory, onToggleNotification, onToggleDarkMode }: Props = $props();
 
-  const tabDefs: { id: Tab; label: string; dot: string; experimental?: boolean }[] = [
+  const tabDefs: { id: Tab; label: string; dot: string }[] = [
     { id: 'earthquake', label: '지진', dot: 'bg-rose-500' },
-    { id: 'est_shindo_region', label: '예상진도', dot: 'bg-amber-500', experimental: true },
     { id: 'realtime', label: '실시간', dot: 'bg-indigo-500' },
     { id: 'overseas', label: '해외', dot: 'bg-sky-500' }
   ];
@@ -48,9 +47,6 @@
           class={seg + (activeTab === t.id ? segOn : segIdle)}>
           <span class={'w-1.5 h-1.5 rounded-full shrink-0 ' + t.dot}></span>
           <span>{t.label}</span>
-          {#if t.experimental}
-            <span class="text-[9px] font-mono text-amber-600 dark:text-amber-400">실험</span>
-          {/if}
         </button>
       {/each}
       <button

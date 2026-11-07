@@ -67,8 +67,8 @@ function processRealtimeImage(time: string, host: RealtimeHost): void {
   ui.acmapGifUrl = `/api/acmap-img?time=${time}&type=${dataType}`;
   ui.estshindoGifUrl = `/api/estshindo-img?time=${time}`;
 
-  if (ui.activeTab === 'est_shindo_region') {
-    host.updateEstShindoMask();
+  if (ui.activeTab === 'realtime') {
+    host.updateEstShindoMask(); // EEW 중에만 실갱신, 아니면 clear (app-controller 게이트)
   }
 
   img.onload = () => {

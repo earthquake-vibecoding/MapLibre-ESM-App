@@ -1,6 +1,6 @@
 import { KEYS } from './config';
 
-export type Tab = 'realtime' | 'earthquake' | 'est_shindo_region' | 'overseas';
+export type Tab = 'realtime' | 'earthquake' | 'overseas';
 export type IntensityDisplayMode = 'areas' | 'stations' | 'both';
 export type RealtimeDataType = 'jma_s' | 'jma_b';
 

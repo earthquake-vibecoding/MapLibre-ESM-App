@@ -8,7 +8,7 @@ import { buildDetectedFeatures, loadDetectedEvents, saveDetectedEvents } from '.
 import { applyAreaIntensity } from './quake/area-intensity';
 import { buildEpicenterFeatures, buildMockEew, isActiveEEW } from './quake/quake-utils';
 import { focusActiveGrids, focusOnEarthquake, focusOnEew, focusOnEpicenter } from './focus';
-import { updateMaskLayer } from './quake/est-shindo';
+import { clearMaskLayer, updateMaskLayer } from './quake/est-shindo';
 import { soundService } from './services/sound';
 import { notificationService } from './services/notification.svelte';
 import { VIEW, KEYS, SIM } from './config';
@@ -80,6 +80,12 @@ export class AppController {
   }
 
   updateEstShindoMask(): void {
+    if (!this.mapCtl) return;
+    // 예상진도 마스크는 EEW 발표 중에만 의미가 있다 — 끝나면 소스를 비워 잔상 제거
+    if (!isActiveEEW(wolfxEewService.eewData)) {
+      clearMaskLayer(this.mapCtl);
+      return;
+    }
     updateMaskLayer(this.mapCtl, ui.estshindoGifUrl);
   }
 
@@ -89,10 +95,7 @@ export class AppController {
     ui.isCleanMode = false;
     ui.activeTab = tab;
     this.updateVisibility();
-    if (tab === 'est_shindo_region') {
-      this.updateEstShindoMask();
-      this.mapCtl?.fitFullView(1000);
-    } else if (tab === 'earthquake') {
+    if (tab === 'earthquake') {
       if (!p2pQuakeService.selectedQuake && p2pQuakeService.p2pHistoryList.length > 0) {
         p2pQuakeService.selectedQuake = p2pQuakeService.p2pHistoryList[0];
       }
@@ -103,6 +106,7 @@ export class AppController {
         focusOnEarthquake(this.mapCtl, quake, this.areaData?.areaForecastGeoJSON);
       }
     } else if (tab === 'realtime') {
+      this.updateEstShindoMask();
       this.mapCtl?.fitFullView(1000);
     }
   }

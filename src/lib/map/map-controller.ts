@@ -4,7 +4,7 @@ import { createStationHighlightMarker, type StationLocation } from './map-marker
 import { VIEW } from '../config';
 
 export interface VisState {
-  tab: 'realtime' | 'earthquake' | 'est_shindo_region' | 'overseas';
+  tab: 'realtime' | 'earthquake' | 'overseas';
   mode: 'areas' | 'stations' | 'both';
   waveRings: boolean;
   eewActive: boolean;
@@ -74,7 +74,7 @@ export class MapController {
   private applyVisibilityNow(s: VisState): void {
     const map = this.map;
     const isEarthquakeTab = s.tab === 'earthquake';
-    const isEstShindoTab = s.tab === 'est_shindo_region';
+    const isRealtimeTab = s.tab === 'realtime';
 
     // 지역 진도 면적 색상 레이어
     const showAreas = isEarthquakeTab && (s.mode === 'areas' || s.mode === 'both');
@@ -84,18 +84,17 @@ export class MapController {
       if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', vis(showAreas));
     }
 
-    // 실험적 예상진도 행정구역 마스킹 레이어
+    // 예상진도 행정구역 마스킹 레이어 — 실시간 탭에서 EEW 중에만 소스가 채워짐 (est-shindo.ts)
     if (map.getLayer('est-shindo-mask-fill')) {
-      map.setLayoutProperty('est-shindo-mask-fill', 'visibility', vis(isEstShindoTab));
+      map.setLayoutProperty('est-shindo-mask-fill', 'visibility', vis(isRealtimeTab));
     }
     if (map.getLayer('est-shindo-mask-line')) {
-      map.setLayoutProperty('est-shindo-mask-line', 'visibility', vis(isEstShindoTab));
+      map.setLayoutProperty('est-shindo-mask-line', 'visibility', vis(isRealtimeTab));
     }
 
-    // 관측점 레이어: 실시간/예상진도 탭 표시, 예상진도 탭에서는 아주 흐리게
+    // 관측점 레이어: 지진 예보구역 탭 외 표시
     if (map.getLayer('points-layer')) {
       map.setLayoutProperty('points-layer', 'visibility', vis(!isEarthquakeTab));
-      map.setPaintProperty('points-layer', 'circle-opacity', isEstShindoTab ? 0.1 : 1.0);
     }
     if (map.getLayer('stations-hit')) {
       map.setLayoutProperty('stations-hit', 'visibility', vis(!isEarthquakeTab));
