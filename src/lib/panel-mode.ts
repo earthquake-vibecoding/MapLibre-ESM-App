@@ -52,6 +52,8 @@ export function initPanelBridge(onOpenChange: (open: boolean) => void): void {
   bridge.isOpen().then((open) => {
     onOpenChange(open);
     setPanelRelay(open);
+    // 리로드 후 isOpen 복구 경로에서도 선택을 보내야 릴레이 대상이 정해짐 — 누락 시 패널이 낡은 스냅샷에서 동결
+    if (open) sendPanelSelect(ui.stationPanelCode);
   });
   bridge.onFlyTo((lonlat) => app.mapCtl?.flyTo({ center: lonlat, ...VIEW.stationFly }));
   // 패널 창에서 고른 관측소 → 메인 선택 갱신 (릴레이 대상 + 오버레이가 따라옴)

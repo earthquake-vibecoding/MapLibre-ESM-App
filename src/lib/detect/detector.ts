@@ -26,7 +26,7 @@ export function processFrame(
 ): DetectResult {
   let updated = false;
   let detectedUpdated = false;
-  let newEventDetected = false;
+  let newEventId: number | null = null; // 이번 프레임에서 새로 생성된 첫 이벤트 — 카메라 중심은 이 이벤트 관측소만으로 계산
   let detectedCenter: [number, number] | null = null;
   let soundJindoToPlay = -3;
   const frameTime = Date.now(); // 히스토리 타임스탬프 — 프레임당 1회
@@ -131,7 +131,7 @@ export function processFrame(
               maxLevel: 0,
               maxJindo: stn.jindo
             };
-            newEventDetected = true;
+            if (newEventId === null) newEventId = targetEvent.id;
             detectedCenter = stn.lonlat;
           }
         }
@@ -157,12 +157,13 @@ export function processFrame(
     }
   }
 
-  if (newEventDetected) {
-    const newlyTriggered = Array.from(stationsState.values()).filter(s => s.event !== null);
-    if (newlyTriggered.length > 0) {
-      const sumLon = newlyTriggered.reduce((acc, s) => acc + s.lonlat[0], 0);
-      const sumLat = newlyTriggered.reduce((acc, s) => acc + s.lonlat[1], 0);
-      detectedCenter = [sumLon / newlyTriggered.length, sumLat / newlyTriggered.length];
+  if (newEventId !== null) {
+    // 신규 이벤트 관측소만으로 중심 계산 — 만료 대기 중인 옛 이벤트가 섞이면 두 진원 사이로 카메라가 감
+    const newEventStations = Array.from(stationsState.values()).filter(s => s.event?.id === newEventId);
+    if (newEventStations.length > 0) {
+      const sumLon = newEventStations.reduce((acc, s) => acc + s.lonlat[0], 0);
+      const sumLat = newEventStations.reduce((acc, s) => acc + s.lonlat[1], 0);
+      detectedCenter = [sumLon / newEventStations.length, sumLat / newEventStations.length];
     }
   } else {
     detectedCenter = null;
