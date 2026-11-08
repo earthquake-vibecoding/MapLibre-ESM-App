@@ -38,7 +38,7 @@ export function createFrameBuffer({ fetchImpl = fetch, now = Date.now } = {}) {
     return hit;
   }
 
-  /** 폴러 1틱 — latest.json 1회 + jma_s 프레임 1장(적응형 딜레이) 적재 */
+  /** 폴러 1틱 — latest.json 1회 + jma_s 프레임 1장(적응형 딜레이) 적재. 신규 프레임 정보를 반환(없으면 null) */
   async function pollOnce() {
     const body = await fetchLatestJson(fetchImpl);
     if (body) latest = { body, at: now() };
@@ -48,9 +48,10 @@ export function createFrameBuffer({ fetchImpl = fetch, now = Date.now } = {}) {
       put(frame.timeStr, 'jma_s', frame.buf);
       lastSuccessAt = now();
       consecutiveFailures = 0;
-    } else {
-      consecutiveFailures++;
+      return frame;
     }
+    consecutiveFailures++;
+    return null;
   }
 
   function getLatestJson() {
@@ -74,6 +75,12 @@ const singleton = createFrameBuffer();
 let started = false;
 let pollTimer = null;
 let polling = false;
+let onFrameHook = null; // 신규 프레임 도착 시 호출 — 감지 러너가 등록
+
+/** 신규 프레임 콜백 등록 — ({timeStr, buf, delayMs}) 인자. 러너 크래시가 폴러를 죽이지 않게 루프에서 방어 */
+export function setOnFrame(fn) {
+  onFrameHook = fn;
+}
 
 export function getFrameBuffer() {
   return singleton;
@@ -87,7 +94,8 @@ export function startKmoniPoller() {
     if (!polling) {
       polling = true;
       try {
-        await singleton.pollOnce();
+        const frame = await singleton.pollOnce();
+        if (frame && onFrameHook) onFrameHook(frame);
       } catch {
         // pollOnce는 내부에서 오류를 흡수하지만 방어막
       } finally {

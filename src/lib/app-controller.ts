@@ -1,5 +1,6 @@
 import { ui, applyTheme, type Tab } from './state.svelte';
 import { p2pQuakeService } from './services/p2p-quake.svelte';
+import { stopQuakeFeed } from './quake/quake-feed';
 import { wolfxEewService } from './services/wolfx-eew.svelte';
 import type { AreaData } from './quake/area-data';
 import type { MapController } from './map/map-controller';
@@ -26,8 +27,7 @@ export class AppController {
 
   destroy(): void {
     this.ticker?.stop();
-    p2pQuakeService.disconnect();
-    wolfxEewService.disconnect();
+    stopQuakeFeed(); // SSE 구독 정리
     this.mapCtl?.destroy();
   }
 

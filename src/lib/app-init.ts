@@ -31,10 +31,7 @@ export async function initApp(container: HTMLElement): Promise<void> {
   }
 
   const urlParams = new URLSearchParams(window.location.search);
-  if (!urlParams.has('detect')) {
-    urlParams.set('detect', 'true');
-    window.history.replaceState({}, '', `${window.location.pathname}?${urlParams.toString()}`);
-  }
+  // 감지는 서버(detect-runner)가 담당 — ?detect=true 강제 세팅 폐지 (URL 깔끔)
   // DevTools 디버깅 핸들: window.__quake(전체 상태), window.__quakeLog(최근 로그). ?debug=1 → console 출력
   (window as any).__quakeDebug = urlParams.has('debug');
   (window as any).__quake = { ui, app };
@@ -72,8 +69,8 @@ export async function initApp(container: HTMLElement): Promise<void> {
   }
 
   startTicker();
-  startQuakeFeed(createFeedHandlers(app));
-  usgsService.start();
+  startQuakeFeed(createFeedHandlers(app), app);
+  // usgsService.start(); // 해외 탭 숨김 — USGS 폴링 정지
 }
 
 function onMapReady(): void {

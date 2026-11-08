@@ -23,13 +23,11 @@ export const DETECT = {
 
 /** 폴링/갱신 주기·쓰로틀 */
 export const TIMING = {
-  heartbeatMs: 1000,       // kmoni 프레임 폴링 (ticker)
   blinkMs: 500,            // 감지 격자 점멸 주기
   waveThrottleMs: 33,      // P/S파 렌더 스로틀 (≈30fps)
   maskThrottleMs: 500,     // 예상진도 마스크 갱신 스로틀 (로컬 계산)
   relayMs: 500,            // 메인 → 외부 패널 스냅샷 릴레이
   panelSnapMs: 500,        // 패널 UI 스냅샷 갱신
-  quakePollMs: 20_000,     // P2PQuake 이력 폴링
   usgsPollMs: 300_000,     // USGS 해외지진 피드 폴링 (5분)
   p2pKeepMs: 180_000,      // 실시간 수신 지진 정보 유지 시간
   kmoniLagS: 2,            // kmoni 발행 지연 보정 (초)
@@ -47,11 +45,9 @@ export const TIMING = {
   wsBackoff: 1.5,          // WS 재접속 백오프 배수
 } as const;
 
-/** 외부 API 엔드포인트 (server/api.mjs의 kmoni는 별도 node 프로세스라 여기와 무관) */
+/** 외부 API 엔드포인트 — 외부 채널(p2p/wolfx WS)은 서버가 수신하고 SSE로 릴레이하므로 클라이언트는 동일 출처만 사용 */
 export const NET = {
-  p2pHistoryBase: 'https://api.p2pquake.net/v2/history?codes=551&limit=100&offset=',
-  p2pWs: 'wss://api.p2pquake.net/v2/ws',
-  wolfxWs: 'wss://ws-api.wolfx.jp/jma_eew',
+  p2pHistoryBase: '/api/p2p-history?offset=', // 서버 프록시 (server/api.mjs, 30s 캐시)
   usgsFeed: 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson',
 } as const;
 

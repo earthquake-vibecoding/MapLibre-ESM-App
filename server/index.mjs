@@ -18,7 +18,7 @@ const SECURITY_HEADERS = {
   'Referrer-Policy': 'no-referrer',
   'Content-Security-Policy':
     "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; " +
-    "connect-src 'self' https://api.p2pquake.net wss://api.p2pquake.net wss://ws-api.wolfx.jp https://earthquake.usgs.gov; " +
+    "connect-src 'self'; " +
     "worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
 };
 

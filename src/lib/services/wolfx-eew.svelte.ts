@@ -1,25 +1,14 @@
 import type { EEWMessage } from '../models';
-import { connectWithRetry, type WsRetryHandle } from './ws-connect';
-import { TIMING, NET } from '../config';
+import { TIMING } from '../config';
 import { t } from '../i18n/i18n';
 
 export class WolfxEewService {
   eewData = $state<EEWMessage | null>(null);
   isEewDismissed = $state(false);
 
-  private wsHandle: WsRetryHandle | null = null;
-
-  connectWebSocket(onEewUpdate?: (eew: EEWMessage) => void) {
-    if (typeof WebSocket === 'undefined') return;
-    this.wsHandle?.disconnect();
-    this.wsHandle = connectWithRetry(NET.wolfxWs, {
-      name: 'WolfX',
-      onMessage: (data) => this.handleMessage(data, onEewUpdate)
-    });
-  }
-
-  private handleMessage(data: any, onEewUpdate?: (eew: EEWMessage) => void): void {
-    if (!(data && (data.type === 'jma_eew' || data.Title || data.Hypocenter || data.CodeType === 'EEW'))) return;
+  /** SSE 'eew'(kind wolfx) 수신 — 구 WS handleMessage와 동일 매핑/필터/시뮬 가드. EEW 외 메시지는 null */
+  mapWolfx(data: any): EEWMessage | null {
+    if (!(data && (data.type === 'jma_eew' || data.Title || data.Hypocenter || data.CodeType === 'EEW'))) return null;
     const mappedEew: EEWMessage = {
       Title: data.Title || (data.isWarn ? '緊急地震速報 (警報)' : '緊急地震速報 (予報)'),
       Issue: { Status: data.Issue?.Status || (data.isFinal ? '最終報' : (data.Serial ? `第${data.Serial}報` : t('속보'))) },
@@ -39,16 +28,11 @@ export class WolfxEewService {
 
     // 시뮬레이션 진행 중에는 실제 수신으로 덮지 않음
     const current = this.eewData;
-    if (current && (current as any).isSimulation && Date.now() - ((current as any).simulationStartTime || 0) < TIMING.simGuardMs) return;
+    if (current && (current as any).isSimulation && Date.now() - ((current as any).simulationStartTime || 0) < TIMING.simGuardMs) return null;
 
     this.eewData = mappedEew;
     this.isEewDismissed = false;
-    onEewUpdate?.(mappedEew);
-  }
-
-  disconnect() {
-    this.wsHandle?.disconnect();
-    this.wsHandle = null;
+    return mappedEew;
   }
 }
 

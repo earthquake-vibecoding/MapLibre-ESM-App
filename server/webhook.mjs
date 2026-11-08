@@ -1,19 +1,15 @@
-// Discord 웹후크 릴레이 — WEBHOOK_URL은 서버 env로만 존재(클라이언트 번들 유출 방지).
-// 클라이언트는 /api/webhook/{detect,eew}로 타입드 데이터만 보내고, 임베드 조립·발송은 여기서 담당.
+// Discord 웹후크 발송 — 감지 러너(detect-runner.mjs)/EEW 피드(eew-feed.mjs)가 직접 호출.
+// WEBHOOK_URL은 서버 env로만 존재(클라이언트 번들 유출 방지). 클라이언트 엔드포인트는 서버 감지 전환으로 제거됨.
 // reacct-eqm-1 server/webhook-notifier.ts 정책 이식: 감지 60s 쿨다운, EEW 후속 보는 메시지 PATCH로 병합.
 // 감지는 시작 POST(wait → message id) + 종료 PATCH(같은 메시지에 최종 요약) 2단계 — React lastAlertMessageId 패턴.
-import express from 'express';
 import { randomBytes } from 'node:crypto';
-import { requestDiscord, detectPayload, disabled } from './discord.mjs';
-
-const app = express();
-app.use(express.json({ limit: '1mb' })); // 감지 리포트는 kmoni 프레임 PNG(base64)를 동반할 수 있음
+import { requestDiscord, detectPayload } from './discord.mjs';
 
 const DETECT_COOLDOWN_MS = 60_000;
 const EEW_COOLDOWN_MS = 60_000; // 신규 메시지 POST 한정 — 후속 보(PATCH)는 쿨다운 없이 통과
 let detectCooldownUntil = 0;
 let eewCooldownUntil = 0;
-let lastDetectMessage = null; // { id, nonce } — 종료 PATCH는 이 조합만 허용 (무인증 엔드포인트로 임의 메시지 변조 차단)
+let lastDetectMessage = null; // { id, nonce } — 종료 PATCH는 이 조합만 허용
 let lastEewMessage = null;    // { id, originTime, nonce } — 같은 지진의 후속 보 PATCH 대상
 
 function newNonce() {
@@ -71,14 +67,6 @@ function validTop(t) {
   return { name, region: str(t.region, 60) ?? '', jindo: num(t.jindo) };
 }
 
-/** "data:image/png;base64,…" 검증 → Buffer. 크기 상한 700KB, 이외는 null(첨부 없이 진행) */
-export function extractPngDataUrl(v) {
-  const m = typeof v === 'string' ? /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(v) : null;
-  if (!m) return null;
-  const buf = Buffer.from(m[1], 'base64');
-  return buf.length > 0 && buf.length <= 700_000 ? buf : null;
-}
-
 export function buildDetectEmbed(v) {
   const fields = [];
   if (v.top) {
@@ -134,64 +122,53 @@ export function buildEewEmbed(e) {
   };
 }
 
-/** 같은 지진(OriginTime 동일)의 후속 보는 기존 메시지 PATCH, 새 지진은 POST */
-export function nextEewAction(last, originTime) {
-  return last && last.originTime === originTime ? 'patch' : 'post';
-}
-
-app.post('/detect', async (req, res) => {
-  if (!process.env.WEBHOOK_URL) return disabled(res);
-  const body = validateDetect(req.body);
-  if (!body) return res.status(400).json({ error: 'Invalid payload' });
+/** 감지 리포트 POST — 웹후크 미설정/쿨다운/손상 시 null. 성공 시 {id, nonce} (종료 PATCH 대상) */
+export async function sendDetectStart(body, pngBuf) {
+  if (!process.env.WEBHOOK_URL) return null;
+  const v = validateDetect(body);
+  if (!v) return null;
   const now = Date.now();
-  if (now < detectCooldownUntil) return disabled(res);
+  if (now < detectCooldownUntil) return null;
   detectCooldownUntil = now + DETECT_COOLDOWN_MS;
-  const image = extractPngDataUrl(req.body?.image);
-  const sent = await requestDiscord(process.env.WEBHOOK_URL, 'POST', detectPayload(buildDetectEmbed(body), image), true);
-  if (!sent) return res.status(502).end();
+  const sent = await requestDiscord(process.env.WEBHOOK_URL, 'POST', detectPayload(buildDetectEmbed(v), pngBuf), true);
+  if (!sent) return null;
   if (sent.id && /^\d+$/.test(String(sent.id))) {
     lastDetectMessage = { id: String(sent.id), nonce: newNonce() };
-    res.json(lastDetectMessage);
-  } else {
-    res.json({ id: null });
+    return lastDetectMessage;
   }
-});
+  return null;
+}
 
-// 에피소드 종료 — 시작 메시지에 최종 요약으로 덮어씀 (이미지도 최신 프레임으로 교체)
-app.patch('/detect', async (req, res) => {
-  if (!process.env.WEBHOOK_URL) return disabled(res);
-  const body = validateDetect(req.body);
+/** 감지 에피소드 종료 PATCH — 시작 메시지를 최종 요약으로 덮어씀. 실패 시 false (호출부가 신규 POST 폴백) */
+export async function sendDetectFinal(body, pngBuf, msg) {
+  if (!process.env.WEBHOOK_URL || !msg) return false;
+  const v = validateDetect(body);
+  if (!v) return false;
   const m = lastDetectMessage;
-  if (!body || !m || req.body?.id !== m.id || req.body?.nonce !== m.nonce) {
-    return res.status(400).json({ error: 'Invalid payload' });
-  }
-  const image = extractPngDataUrl(req.body?.image);
-  const ok = await requestDiscord(`${process.env.WEBHOOK_URL}/messages/${m.id}`, 'PATCH', detectPayload(buildDetectEmbed(body), image), false);
-  res.status(ok ? 204 : 502).end();
-});
+  if (!m || msg.id !== m.id || msg.nonce !== m.nonce) return false;
+  return requestDiscord(`${process.env.WEBHOOK_URL}/messages/${m.id}`, 'PATCH', detectPayload(buildDetectEmbed(v), pngBuf), false);
+}
 
-app.post('/eew', async (req, res) => {
-  if (!process.env.WEBHOOK_URL) return disabled(res);
-  const body = validateEew(req.body);
-  if (!body) return res.status(400).json({ error: 'Invalid payload' });
-  const embed = buildEewEmbed(body);
-  // 후속 보 = 같은 originTime + 서버가 발급한 nonce. 그 외는 신규 메시지로 쿨다운 적용
-  if (nextEewAction(lastEewMessage, body.originTime) === 'patch' && req.body?.nonce === lastEewMessage.nonce) {
+/** EEW 리포트 — 후속 보(같은 originTime + 서버 발급 nonce)는 PATCH, 새 지진은 POST(쿨다운). 성공 시 {nonce} */
+export async function sendEewReport(body) {
+  if (!process.env.WEBHOOK_URL) return null;
+  const v = validateEew(body);
+  if (!v) return null;
+  const embed = buildEewEmbed(v);
+  if (lastEewMessage && lastEewMessage.originTime === v.originTime && body?.nonce === lastEewMessage.nonce) {
     const ok = await requestDiscord(process.env.WEBHOOK_URL, 'PATCH', JSON.stringify({ embeds: [embed] }), false);
     if (!ok) lastEewMessage = null; // 메시지 삭제 등 실패 시 다음 보는 새 메시지로
-    return res.status(ok ? 204 : 502).end();
+    return ok ? {} : null;
   }
   const now = Date.now();
-  if (now < eewCooldownUntil) return disabled(res);
+  if (now < eewCooldownUntil) return null;
   eewCooldownUntil = now + EEW_COOLDOWN_MS;
   const sent = await requestDiscord(process.env.WEBHOOK_URL, 'POST', JSON.stringify({ embeds: [embed] }), true);
-  if (!sent) return res.status(502).end();
+  if (!sent) return null;
   let nonce = null;
   if (sent.id && /^\d+$/.test(String(sent.id))) {
     nonce = newNonce();
-    lastEewMessage = { id: String(sent.id), originTime: body.originTime, nonce };
+    lastEewMessage = { id: String(sent.id), originTime: v.originTime, nonce };
   }
-  res.json({ nonce });
-});
-
-export default app;
+  return { nonce };
+}

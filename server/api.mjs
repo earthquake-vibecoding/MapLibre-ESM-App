@@ -4,8 +4,11 @@
 import express from 'express';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import webhookApp from './webhook.mjs';
 import historyApp from './history.mjs';
+import ssePush from './push.mjs';
+import { startDetectRunner } from './detect-runner.mjs';
+import { startEewFeed } from './eew-feed.mjs';
+import { startP2pFeed } from './p2p-feed.mjs';
 import { kmoniImgUrl } from './kmoni-poll.mjs';
 import { getFrameBuffer, startKmoniPoller } from './frame-buffer.mjs';
 
@@ -167,10 +170,35 @@ app.get('/estshindo-img', (req, res) => {
   sendImage(res, time, 'EstShindoImg', true);
 });
 
-// Discord 웹후크 릴레이 — /api/webhook/{detect,eew} (server/webhook.mjs, 전역 레이트 리밋 공유)
-app.use('/webhook', webhookApp);
+// P2PQuake 이력 프록시 — 클라이언트가 api.p2pquake.net 직접 호출하지 않게 (CSP connect-src 'self')
+const P2P_HISTORY_BASE = 'https://api.p2pquake.net/v2/history?codes=551&limit=100&offset=';
+let p2pHistoryCache = { at: 0, offset: '', data: null };
+app.get('/p2p-history', async (req, res) => {
+  const offset = typeof req.query['offset'] === 'string' ? req.query['offset'] : '0';
+  const now = Date.now();
+  if (p2pHistoryCache.data && p2pHistoryCache.offset === offset && now - p2pHistoryCache.at < 30_000) {
+    return res.json(p2pHistoryCache.data);
+  }
+  try {
+    const r = await fetchWithTimeout(P2P_HISTORY_BASE + encodeURIComponent(offset), 5000);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    p2pHistoryCache = { at: now, offset, data };
+    res.json(data);
+  } catch {
+    res.status(504).json({ error: 'p2p history fetch failed' });
+  }
+});
 
-// 감지 기록 저장소 — /api/history (GET 목록, POST /detect 적재)
+// 감지 기록 저장소 — /api/history (GET 목록)
 app.use('/history', historyApp);
+
+// SSE 푸시 — /api/events (클라이언트 폴링 대체 단일 스트림)
+app.use(ssePush);
+
+// 서버 감지 파이프라인 + 외부 피드 수신 — api.mjs 로드 시 기동 (dev/prod/Electron 공용)
+startDetectRunner();
+startEewFeed();
+startP2pFeed();
 
 export default app;

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import {
-  validateDetect, buildDetectEmbed, validateEew, buildEewEmbed, nextEewAction, extractPngDataUrl
-} from './webhook.mjs';
+import { inflateSync } from 'node:zlib';
+import { validateDetect, buildDetectEmbed, validateEew, buildEewEmbed } from './webhook.mjs';
+import { encodePng, drawDetectRects } from './png-encode.mjs';
 
 const detectBody = {
   start: Date.UTC(2026, 10, 7, 3, 0, 0),
@@ -55,18 +55,40 @@ describe('detect 임베드', () => {
   });
 });
 
-describe('PNG 첨부 검증', () => {
-  const TINY_PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
-  it('유효 data URL → Buffer', () => {
-    const buf = extractPngDataUrl(`data:image/png;base64,${TINY_PNG}`);
-    expect(buf).toBeInstanceOf(Buffer);
-    expect(buf.length).toBeGreaterThan(0);
-  });
-  it('형식 위반/과대 용량 거부', () => {
-    expect(extractPngDataUrl('data:image/gif;base64,R0lGODlhAQABAAAAACw=')).toBeNull();
-    expect(extractPngDataUrl('javascript:alert(1)')).toBeNull();
-    expect(extractPngDataUrl(undefined)).toBeNull();
-    expect(extractPngDataUrl(`data:image/png;base64,${'A'.repeat(1_000_000)}`)).toBeNull();
+describe('감지 스냅샷 합성 (png-encode)', () => {
+  it('RGBA → PNG 서명 + inflate 역검증 + 빨간 사각형 반영', () => {
+    const W = 64, H = 48;
+    const rgba = new Uint8ClampedArray(W * H * 4);
+    for (let i = 0; i < W * H; i++) {
+      rgba[i * 4] = i % 256; rgba[i * 4 + 1] = 10; rgba[i * 4 + 2] = 20; rgba[i * 4 + 3] = 255;
+    }
+    drawDetectRects(rgba, W, H, [{ x: 20, y: 20 }]);
+    const png = encodePng(rgba, W, H);
+    expect(png.subarray(0, 8)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+
+    // 청크 파싱: IHDR 이후 IDAT 전부 → inflate → filter 바이트(0) 제외하고 원본 RGBA와 일치
+    const idat = [];
+    let p = 8;
+    while (p < png.length) {
+      const len = png.readUInt32BE(p);
+      const type = png.toString('ascii', p + 4, p + 8);
+      if (type === 'IDAT') idat.push(png.subarray(p + 8, p + 8 + len));
+      p += 12 + len;
+    }
+    const raw = inflateSync(Buffer.concat(idat));
+    expect(raw.length).toBe(H * (W * 4 + 1));
+    const red = [0xff, 0x20, 0x20];
+    let rectRed = 0;
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const o = y * (W * 4 + 1) + 1 + x * 4;
+        expect([raw[o], raw[o + 1], raw[o + 2]]).toEqual(
+          [rgba[(y * W + x) * 4], rgba[(y * W + x) * 4 + 1], rgba[(y * W + x) * 4 + 2]]
+        );
+        if (raw[o] === red[0] && raw[o + 1] === red[1] && raw[o + 2] === red[2]) rectRed++;
+      }
+    }
+    expect(rectRed).toBeGreaterThan(0); // 사각형이 그려졌는지
   });
 });
 
@@ -104,11 +126,8 @@ describe('eew 임베드', () => {
   });
 });
 
-describe('EEW 메시지 병합', () => {
-  const last = { id: '123', originTime: '2026/11/07 12:00:00' };
-  it('같은 지진 후속 보는 patch, 새 지진/첫 보는 post', () => {
-    expect(nextEewAction(last, '2026/11/07 12:00:00')).toBe('patch');
-    expect(nextEewAction(last, '2026/11/07 13:00:00')).toBe('post');
-    expect(nextEewAction(null, '2026/11/07 12:00:00')).toBe('post');
+describe('EEW 병합 키 보호', () => {
+  it('originTime 없으면 거부 — PATCH 병합 키라 필수', () => {
+    expect(validateEew({ serial: 1, hypocenter: 'x', originTime: undefined })).toBeNull();
   });
 });

@@ -1,23 +1,19 @@
 import { p2pQuakeService } from '../services/p2p-quake.svelte';
 import { wolfxEewService } from '../services/wolfx-eew.svelte';
 import { notificationService } from '../services/notification.svelte';
-import { reportEew } from '../services/webhook';
 import { soundService } from '../services/sound';
 import { ui } from '../state.svelte';
+import { TIMING } from '../config';
 import { getQuakeUniqueKey, isUnknownQuake } from './quake-utils';
 import { focusOnEarthquake } from '../focus';
-import { TIMING } from '../config';
+import { startServerEvents, stopServerEvents } from '../services/server-events';
 import type { AppController } from '../app-controller';
 
 let lastSeenQuakeId: string | null = null;
-let pollTimer: ReturnType<typeof setInterval> | null = null;
 
-/** 20초 이력 폴링 중지 — destroy 시 누수 방지 */
+/** destroy 시 SSE 정리 */
 export function stopQuakeFeed(): void {
-  if (pollTimer !== null) {
-    clearInterval(pollTimer);
-    pollTimer = null;
-  }
+  stopServerEvents();
 }
 
 export interface QuakeFeedHandlers {
@@ -55,7 +51,7 @@ function handleEew(c: AppController, mappedEew: any): void {
   if (!mappedEew) return;
   // 취소 보고 — 소리/알림/지도 갱신 없이 무시. 서비스가 넣은 eewData는 ticker의 !isActiveEEW 경로가 정리(파 링·마스크·배너)
   if (mappedEew.isCancel) return;
-  // 시뮬레이션 진행 중 실제 수신 차단 — wolfx 서비스 가드가 p2p 경로를 못 막으므로 공용 funnel에서도 검사
+  // 시뮬레이션 진행 중 실제 수신 차단 — 시뮬은 클라이언트 주입이라 이 funnel에서도 검사
   const current = wolfxEewService.eewData;
   if (current?.isSimulation && Date.now() - (current.simulationStartTime || 0) < TIMING.simGuardMs) return;
 
@@ -69,10 +65,9 @@ function handleEew(c: AppController, mappedEew: any): void {
   if (eewKey !== c.lastEewKey || (now - c.lastEewTime > TIMING.eewSoundGapMs)) {
     c.lastEewKey = eewKey;
     c.lastEewTime = now;
-    // Shindo.wav만 — 진도음 계급은 예보(MaxIntensity)가 아니라 실측 감지가 담당
+    // Shindo.wav만 — 진도음 계급은 예보(MaxIntensity)가 아니라 실측 감지가 담당 (웹후크는 서버가 직접 발사)
     soundService.playShindoAudio();
     notificationService.notifyEew(mappedEew);
-    reportEew(mappedEew); // Discord 웹후크 — 취소/시뮬 게이트를 이 funnel과 공유
   }
   c.updateEpicenter();
   // 예보 구역/지점이 있을 때만 색칠 — areas 없는 EEW(wolfx)가 기존 지진 탭 색을 지우지 않게 (원본은 EEW에서 색칠 안 함)
@@ -82,7 +77,8 @@ function handleEew(c: AppController, mappedEew: any): void {
   c.updateVisibility();
 }
 
-export async function startQuakeFeed(handlers: QuakeFeedHandlers): Promise<void> {
+/** 초기 이력(서버 프록시) 로드 후 SSE 구독 — p2p/wolfx 직접 WS·20초 이력 폴링 폐지 */
+export async function startQuakeFeed(handlers: QuakeFeedHandlers, host: AppController): Promise<void> {
   ui.historyOffset = 0;
   const history = await p2pQuakeService.fetchHistory(0);
   if (history.length > 0) {
@@ -92,33 +88,15 @@ export async function startQuakeFeed(handlers: QuakeFeedHandlers): Promise<void>
     handlers.onInitialQuake(latest);
   }
 
-  p2pQuakeService.connectWebSocket(
-    (data) => {
+  startServerEvents({
+    host,
+    onQuake: (data) => {
       const newKey = getQuakeUniqueKey(data);
       if (newKey && newKey !== lastSeenQuakeId) {
         lastSeenQuakeId = newKey;
-        p2pQuakeService.selectedQuake = data;
         handlers.onNewQuake(data);
       }
     },
-    (mappedEew) => handlers.onEew(mappedEew)
-  );
-
-  wolfxEewService.connectWebSocket((_mappedEew) => handlers.onEew(_mappedEew));
-
-  if (typeof window !== 'undefined') {
-    stopQuakeFeed();
-    pollTimer = setInterval(async () => {
-      const updatedHistory = await p2pQuakeService.fetchHistory(0);
-      if (updatedHistory.length > 0) {
-        const newest = updatedHistory[0];
-        const newKey = getQuakeUniqueKey(newest);
-        if (newKey && newKey !== lastSeenQuakeId) {
-          lastSeenQuakeId = newKey;
-          p2pQuakeService.selectedQuake = newest;
-          handlers.onNewQuake(newest);
-        }
-      }
-    }, TIMING.quakePollMs);
-  }
+    onEew: (mappedEew) => handlers.onEew(mappedEew)
+  });
 }

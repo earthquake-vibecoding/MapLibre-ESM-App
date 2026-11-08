@@ -60,4 +60,11 @@ export function createHistoryApp(store) {
   return app;
 }
 
-export default createHistoryApp(createHistoryStore(path.join(process.cwd(), 'data')));
+let sharedStore = null;
+/** 싱글턴 저장소 — 감지 러너가 서버 내부에서 직접 적재할 때 사용 (HTTP 경유 폐지) */
+export function getHistoryStore() {
+  if (!sharedStore) sharedStore = createHistoryStore(path.join(process.cwd(), 'data'));
+  return sharedStore;
+}
+
+export default createHistoryApp(getHistoryStore());

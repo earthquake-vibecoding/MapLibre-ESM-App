@@ -1,13 +1,9 @@
 import { wolfxEewService } from './services/wolfx-eew.svelte';
 import { isActiveEEW } from './quake/quake-utils';
 import { computeWaveState, type SeismicTable } from './detect/seismic';
-import { fetchLatestTime, type RealtimeHost } from './detect/realtime-img';
-import { clearDetectedEvents } from './detect/grid';
+import { reapplyLastFrame, type RealtimeHost } from './detect/realtime-img';
 import { reportAlertStatus } from './electron-bridge';
-import { accumulateExpiredEvent, finishDetectionEpisode, collectLiveEpisode } from './detect/detection-log';
-import { takeDetectSnapshot } from './detect/detect-snapshot';
-import { reportDetectionEpisode, reportDetectionStart } from './services/webhook';
-import { WEBHOOK, TIMING } from './config';
+import { TIMING } from './config';
 import type { MapController } from './map/map-controller';
 
 export interface TickerHost extends RealtimeHost {
@@ -20,19 +16,16 @@ export interface TickerHost extends RealtimeHost {
   clearEstShindoMask(): void;
 }
 
+/** 렌더 루프 — 감지 판정·만료·웹후크는 서버(detect-runner.mjs)가 SSE로 밀어주고 여기선 표시만 담당 */
 export class Ticker {
   private animationId: number | null = null;
-  private heartbeatId: ReturnType<typeof setInterval> | null = null;
   private lastWaveRenderTime = 0;
   private lastMaskRenderTime = 0;
   private wavesActive = false;
-  private wasDetecting = false; // 감지 시작 엣지 검출용 (0→N 전환 1회)
-  private pendingStart = false; // 시작 리포트 대기 (진도 미달로 미발송 시 상승하면 보내게)
 
   constructor(private host: TickerHost) {}
 
   start(): void {
-    this.startHeartbeat();
     this.loop();
   }
 
@@ -41,25 +34,18 @@ export class Ticker {
       cancelAnimationFrame(this.animationId);
     }
     this.animationId = null;
-    if (this.heartbeatId !== null) clearInterval(this.heartbeatId);
-    this.heartbeatId = null;
   }
 
+  /** 지표/지중 전환 — 마지막 프레임을 재적용해 표시 소스만 갱신 */
   refreshTime(): void {
-    fetchLatestTime(this.host);
-  }
-
-  /** 감지 폴링(1s) — rAF는 백그라운드 탭에서 완전 정지하므로 타이머로 분리. 스로틀링 회피는 sound.ts keep-alive */
-  private startHeartbeat(): void {
-    if (typeof window === 'undefined') return;
-    this.heartbeatId = setInterval(() => fetchLatestTime(this.host), TIMING.heartbeatMs);
+    reapplyLastFrame(this.host);
   }
 
   private loop = () => {
     try {
       this.tickOnce();
     } catch (e) {
-      // 지도/서비스 예외가 rAF 루프 자체를 죽여 만료 처리가 멈추는 것 방지
+      // 지도/서비스 예외가 rAF 루프 자체를 죽이는 것 방지
       console.warn('ticker loop error (continuing):', e);
     } finally {
       if (typeof window !== 'undefined') {
@@ -79,51 +65,20 @@ export class Ticker {
       this.host.updateVisibility();
     }
 
-    // 2+3. station event: 감지 블링/만료를 단일 패스로 처리 (프레임마다 Array.from 할당 방지)
+    // 감지 격자 점멸 — 이벤트는 서버가 SSE frame.ev로 밀어줌 (로컬 만료/웹후크 없음)
     const mapCtl = this.host.mapCtl;
     let activeCount = 0;
-    let expired = false;
     for (const stn of this.host.stationsState.values()) {
-      if (!stn.event) continue;
-      if (stn.expireTime && now >= stn.expireTime) {
-        accumulateExpiredEvent(stn); // 기록용 — event가 지워지기 전에 누적
-        stn.event = null;
-        stn.expireTime = null;
-        expired = true;
-      } else {
-        activeCount++;
-      }
+      if (stn.event) activeCount++;
     }
-
-    // 감지 시작 엣지 — 흔들림 감지 즉시 Discord 리포트(라이브 상태 + 지도 스냅샷)
-    if (activeCount > 0 && !this.wasDetecting) this.pendingStart = true;
-    this.wasDetecting = activeCount > 0;
-    if (this.pendingStart && activeCount > 0) {
-      const live = collectLiveEpisode(this.host.stationsState);
-      if (live && live.maxJindo >= WEBHOOK.minJindo) {
-        this.pendingStart = false;
-        reportDetectionStart(live, takeDetectSnapshot());
-      }
-    }
-
     if (activeCount > 0 && mapCtl) {
       mapCtl.blinkDetected(Math.floor(now / TIMING.blinkMs) % 2 === 0);
-    }
-    if (expired) {
-      if (activeCount === 0) {
-        const entry = finishDetectionEpisode(); // 에피소드 종료 → 감지 기록 1건
-        reportDetectionEpisode(entry, takeDetectSnapshot()); // 진도1 이상이면 기록+웹후크(지도 첨부)
-        // 카메라만 전체 보기 복귀 (원본 동작) — 클린모드 진입은 전체보기 버튼 전용
-        this.host.mapCtl?.fitFullView(800);
-        clearDetectedEvents();
-      }
-      this.host.updateDetectedEvents();
     }
 
     // 트레이 상태 보고: 감지 격자 또는 활성 EEW (브라우저에선 noop)
     reportAlertStatus(activeCount > 0 || !!wolfxEewService.eewData);
 
-    // 4. wave animation
+    // wave animation
     this.updateWaves(now);
   }
 

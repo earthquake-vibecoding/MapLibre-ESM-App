@@ -1,119 +1,143 @@
+/**
+ * SSE frame 이벤트 적용 — 서버 감지 전환으로 클라이언트는 판정하지 않고 푸시를 반영만 한다.
+ * (구 realtime-img: latest-time 폴링 → 프레임 fetch → 캔버스 디코드 → processFrame — 전부 서버 detect-runner.mjs로 이전)
+ * 사운드/알림/관심지역 필터는 개인 설정이라 여기서 판단.
+ */
 import { ui } from '../state.svelte';
-import { processFrame } from './detector';
-import { updateDetectSnapshot } from './detect-snapshot';
 import { getJindoString, jindoToScale } from '../quake/jma-utils';
 import { soundService } from '../services/sound';
 import { notificationService } from '../services/notification.svelte';
 import { alertFilterPasses } from '../quake/alert-filter';
+import { appendDetectionEntry } from './detection-log';
+import { clearDetectedEvents } from './grid';
 import { dbg } from '../debug';
-import { TIMING, VIEW } from '../config';
+import { VIEW } from '../config';
 import type { MapController } from '../map/map-controller';
 
-// 감지 활성화 플래그 — app-init이 ?detect=true를 강제 세팅하므로 'false'로 명시한 경우에만 끔
-const DETECT_ENABLED =
-  typeof window === 'undefined' || new URLSearchParams(window.location.search).get('detect') !== 'false';
-
-// 마지막 이미지 요청 식별자 — 늦게 도착한 이전 로드의 onload가 최신 프레임을 덮지 않게 함
-let latestImgReq = 0;
+/** 서버 detect-runner.mjs가 1Hz로 방송하는 frame 이벤트 페이로드 */
+export interface FrameEvent {
+  time: string; // 14자리 JST
+  delayMs: number;
+  gif: string; // jma_s 프레임 base64 — 지도/GifView 표시용
+  j: number[]; // 관측소 순서 계측진도×10 (-30 = 데이터 없음)
+  c: number[]; // 관측소 순서 픽셀색 0xRRGGBB (-1 = 투명) — kmoni 연속 컬러맵 유지
+  ev: { c: string; m: number; s: number }[]; // 이벤트 활성 관측소 (code, maxJindo×10, startTime)
+  sound: number | null; // 이번 프레임 계급 상승 최대 계측진도
+  center: [number, number] | null; // 신규 이벤트 중심
+  ended: any | null; // 에피소드 종료 엔트리
+}
 
 export interface RealtimeHost {
   readonly geojson: any | null;
   readonly stationsState: Map<string, any>;
   readonly mapCtl: MapController | null;
-  // [GIF 파서 비활성] 복구 시: 아래 멤버 + 호출부 주석 해제 (app-controller 참고)
-  // updateEstShindoMask(): void;
   updateDetectedEvents(): void;
 }
 
-export async function fetchLatestTime(host: RealtimeHost): Promise<void> {
-  try {
-    const response = await fetch('/api/latest-time');
-    if (response.ok) {
-      const text = await response.text();
-      const trimmed = text ? text.trim() : '';
-      if (trimmed && trimmed.startsWith('{')) {
-        try {
-          const data = JSON.parse(trimmed);
-          if (data && data.latest_time) {
-            ui.latestTime = data.latest_time;
+let lastFrame: FrameEvent | null = null;
 
-            // 강진 모니터 데이터 지연 대응 — 서버 폴러가 적응한 발행 지연(optimal_delay_ms)을 따라간다.
-            // 버퍼 최신 프레임보다 1초 뒤 시각이 되어 서버 프레임 버퍼 히트가 보장된다 (폴러 없으면 기존 2초).
-            const lagS = Math.max(1, Math.round((Number(data.optimal_delay_ms) || TIMING.kmoniLagS * 1000) / 1000));
-            const dateObj = new Date(data.latest_time.replace(/\//g, '-'));
-            dateObj.setSeconds(dateObj.getSeconds() - lagS);
+/** 14자리 JST → 표시용 'YYYY/MM/DD HH:MM:SS' (로컬TZ 변환 금지 — kmoni JST 그대로) */
+function formatJst(t: string): string {
+  return `${t.slice(0, 4)}/${t.slice(4, 6)}/${t.slice(6, 8)} ${t.slice(8, 10)}:${t.slice(10, 12)}:${t.slice(12, 14)}`;
+}
 
-            const pad = (n: number) => n.toString().padStart(2, '0');
-            const timeStr = `${dateObj.getFullYear()}${pad(dateObj.getMonth() + 1)}${pad(dateObj.getDate())}${pad(dateObj.getHours())}${pad(dateObj.getMinutes())}${pad(dateObj.getSeconds())}`;
+/** 지표(jma_s=푸시 b64)/지중(jma_b=URL on-demand) 표시 소스 */
+function currentGifSrc(e: FrameEvent): string {
+  return ui.realtimeDataType === 'jma_s'
+    ? `data:image/gif;base64,${e.gif}`
+    : `/api/realtime-img?time=${e.time}&type=jma_b`;
+}
 
-            processRealtimeImage(timeStr, host);
-          }
-        } catch {
-          // Ignore malformed JSON gracefully
-        }
-      }
+export function applyFrameEvent(e: FrameEvent, host: RealtimeHost): void {
+  const geojson = host.geojson;
+  if (!geojson) return;
+  lastFrame = e;
+
+  ui.latestTime = formatJst(e.time);
+  ui.currentGifUrl = currentGifSrc(e);
+  ui.acmapGifUrl = `/api/acmap-img?time=${e.time}&type=${ui.realtimeDataType}`;
+  ui.estshindoGifUrl = `/api/estshindo-img?time=${e.time}`;
+
+  const now = Date.now();
+  const evByCode = new Map(e.ev.map(v => [v.c, v]));
+  const features = geojson.features;
+  let visualChanged = false;
+
+  for (let i = 0; i < features.length && i < e.j.length; i++) {
+    const f = features[i];
+    const stn = host.stationsState.get(f.properties.code);
+    if (!stn) continue;
+
+    const color = e.c[i] >= 0 ? `rgba(${(e.c[i] >> 16) & 255},${(e.c[i] >> 8) & 255},${e.c[i] & 255},1)` : 'transparent';
+    if (f.properties.color !== color || stn.color !== color) {
+      f.properties.color = color;
+      stn.color = color;
+      visualChanged = true;
     }
-  } catch {
-    // Ignore network errors gracefully
+
+    const jindo = e.j[i] === -30 ? null : e.j[i] / 10;
+    if (jindo !== null) {
+      // delta/deltaSum — detector.ts와 동일 계산 (서버는 미디언 필터 적용된 jindo만 보냄)
+      if (stn.jindo !== null) {
+        stn.delta.unshift(jindo - stn.jindo);
+        if (stn.delta.length > 10) stn.delta.pop();
+        stn.deltaSum = stn.delta.reduce((acc: number, v: number) => acc + v, 0);
+      }
+      stn.jindo = jindo;
+      stn.history.push({ t: now, j: jindo });
+      if (stn.history.length > 60) stn.history.shift();
+    } else if (stn.jindo !== null || stn.delta.length > 0) {
+      stn.jindo = null;
+      stn.delta = [];
+      stn.deltaSum = 0;
+      stn.rawJindoHistory = [];
+      stn.history.push({ t: now, j: null });
+      if (stn.history.length > 60) stn.history.shift();
+    }
+
+    // 이벤트 상태는 서버가 판정 — ev 목록과 대조해 반영/해제
+    const evData = evByCode.get(stn.code);
+    if (evData) {
+      if (!stn.event || stn.event.startTime !== evData.s) {
+        stn.event = { id: stn.code, startTime: evData.s, maxLevel: 0, maxJindo: evData.m / 10 };
+        visualChanged = true;
+      } else if (evData.m / 10 > (stn.event.maxJindo ?? -99)) {
+        stn.event.maxJindo = evData.m / 10;
+      }
+    } else if (stn.event) {
+      stn.event = null;
+      visualChanged = true;
+    }
+  }
+
+  if (visualChanged) {
+    host.mapCtl?.setSource('points', geojson);
+    host.updateDetectedEvents();
+  }
+
+  if (e.sound !== null) {
+    const pass = alertFilterPasses(host.stationsState);
+    dbg(`감지 jindo=${e.sound.toFixed(1)} 필터=${pass ? '통과' : '차단'}`);
+    if (pass) {
+      soundService.playShakeDetected(e.sound);
+      const scale = jindoToScale(e.sound);
+      notificationService.notifyShakingDetection(scale > 0 ? getJindoString(scale) : e.sound.toFixed(1));
+    }
+  }
+
+  if (e.center) {
+    host.mapCtl?.flyTo({ center: e.center, ...VIEW.detectionFly, essential: true });
+  }
+
+  if (e.ended) {
+    appendDetectionEntry(e.ended);
+    host.mapCtl?.fitFullView(800);
+    clearDetectedEvents();
+    host.updateDetectedEvents();
   }
 }
 
-function processRealtimeImage(time: string, host: RealtimeHost): void {
-  const geojson = host.geojson;
-  if (!geojson) return;
-
-  const dataType = ui.realtimeDataType;
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  const reqId = ++latestImgReq;
-  img.src = `/api/realtime-img?time=${time}&type=${dataType}`;
-  ui.currentGifUrl = img.src;
-  ui.acmapGifUrl = `/api/acmap-img?time=${time}&type=${dataType}`;
-  ui.estshindoGifUrl = `/api/estshindo-img?time=${time}`;
-
-  // [GIF 파서 비활성] 마스크 갱신은 ticker.updateWaves(로컬 계산)가 담당 — 복구 시 주석 해제
-  // if (ui.activeTab === 'realtime') {
-  //   host.updateEstShindoMask();
-  // }
-
-  img.onload = () => {
-    if (reqId !== latestImgReq) return; // 더 최신 프레임 요청이 있으면 폐기
-    const canvas = document.createElement('canvas');
-    canvas.width = img.width;
-    canvas.height = img.height;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.drawImage(img, 0, 0);
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-
-    const result = processFrame(imageData, canvas.width, canvas.height, geojson.features, host.stationsState, DETECT_ENABLED);
-
-    // 감지 중 프레임 보관(2초 스로틀) — 에피소드 종료 시 Discord 첨부용으로 회수
-    if (DETECT_ENABLED) {
-      updateDetectSnapshot(imageData, canvas.width, canvas.height, geojson.features, host.stationsState);
-    }
-
-    if (result.soundJindo > -3) {
-      const pass = alertFilterPasses(host.stationsState);
-      dbg(`감지 jindo=${result.soundJindo.toFixed(1)} 필터=${pass ? '통과' : '차단'}`);
-      if (pass) {
-        soundService.playShakeDetected(result.soundJindo);
-        // soundJindo는 계측진도 — 진도 코드로 환산 후 표기 (코드 미달이면 소수 표기)
-        const scale = jindoToScale(result.soundJindo);
-        notificationService.notifyShakingDetection(scale > 0 ? getJindoString(scale) : result.soundJindo.toFixed(1));
-      }
-    }
-
-    if (result.newEventCenter) {
-      host.mapCtl?.flyTo({ center: result.newEventCenter, ...VIEW.detectionFly, essential: true });
-    }
-
-    if (result.updated) {
-      host.mapCtl?.setSource('points', geojson);
-    }
-
-    if (result.detectedUpdated) {
-      host.updateDetectedEvents();
-    }
-  };
+/** jma_s↔jma_b 전환 시 — 마지막 프레임을 재적용해 표시 소스만 갱신 */
+export function reapplyLastFrame(host: RealtimeHost): void {
+  if (lastFrame && host.geojson) applyFrameEvent(lastFrame, host);
 }

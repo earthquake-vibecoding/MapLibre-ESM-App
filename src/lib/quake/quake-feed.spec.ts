@@ -12,13 +12,12 @@ vi.mock('../services/notification.svelte', () => ({
   notificationService: { notifyEew: vi.fn(), notifyQuake: vi.fn() }
 }));
 vi.mock('../services/p2p-quake.svelte', () => ({
-  p2pQuakeService: { fetchHistory: vi.fn(async () => []), connectWebSocket: vi.fn() }
+  p2pQuakeService: { fetchHistory: vi.fn(async () => []), ingest551: vi.fn(), map556ToEew: vi.fn() }
 }));
-vi.mock('../services/webhook', () => ({
-  reportDetectionEpisode: vi.fn(),
-  reportEew: vi.fn()
+vi.mock('../services/server-events', () => ({
+  startServerEvents: vi.fn(),
+  stopServerEvents: vi.fn()
 }));
-import { reportEew } from '../services/webhook';
 
 function fakeController(): AppController {
   return {
@@ -48,11 +47,10 @@ describe('handleEew 알림 게이트', () => {
     });
     expect(soundService.playShindoAudio).not.toHaveBeenCalled();
     expect(notificationService.notifyEew).not.toHaveBeenCalled();
-    expect(reportEew).not.toHaveBeenCalled();
     expect(wolfxEewService.eewData).toBeNull();
   });
 
-  it('정상 EEW는 소리/알림/웹후크 유지', () => {
+  it('정상 EEW는 소리/알림 유지 (웹후크는 서버 발사)', () => {
     createFeedHandlers(fakeController()).onEew({
       OriginTime: '2026/11/07 12:00:00',
       Hypocenter: '테스트',
@@ -60,7 +58,6 @@ describe('handleEew 알림 게이트', () => {
     });
     expect(soundService.playShindoAudio).toHaveBeenCalledTimes(1);
     expect(notificationService.notifyEew).toHaveBeenCalledTimes(1);
-    expect(reportEew).toHaveBeenCalledTimes(1);
   });
 
   it('시뮬레이션 진행 중 실제 EEW 수신은 차단 (p2p 경로)', () => {
@@ -71,7 +68,6 @@ describe('handleEew 알림 게이트', () => {
       MaxIntensity: '5-'
     });
     expect(soundService.playShindoAudio).not.toHaveBeenCalled();
-    expect(reportEew).not.toHaveBeenCalled();
     expect((wolfxEewService.eewData as any).isSimulation).toBe(true);
   });
 });

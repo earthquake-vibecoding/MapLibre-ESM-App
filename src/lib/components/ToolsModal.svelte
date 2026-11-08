@@ -1,5 +1,5 @@
 <script lang="ts">
-  import SoundPreview from './SoundPreview.svelte';
+  // import SoundPreview from './SoundPreview.svelte'; // 미리듣기 숨김
   import AlertFilterSettings from './AlertFilterSettings.svelte';
   import LanguageSettings from './LanguageSettings.svelte';
   import { getDetectionLog, clearDetectionLog } from '../detect/detection-log';
@@ -51,11 +51,13 @@
     </div>
 
     <div class="flex flex-col gap-2">
+      <!-- P/S 모의 시뮬 숨김
       <button
         onclick={onTriggerEewSimulation}
         class="w-full px-3 py-2.5 rounded-md font-bold text-sm flex items-center justify-center cursor-pointer transition-colors bg-amber-100 border border-amber-400 text-amber-700 hover:bg-amber-200 dark:bg-amber-950 dark:border-amber-600 dark:text-amber-300 dark:hover:bg-amber-900">
         {t('P/S파 모의 시뮬레이션')}
       </button>
+      -->
       <button
         onclick={onFocusDetectedGrid}
         class={'w-full px-3 py-2.5 rounded-md font-bold text-sm flex items-center justify-center cursor-pointer transition-colors border ' + (hasDetectedGrids
@@ -105,8 +107,10 @@
       <AlertFilterSettings />
     </div>
 
+    <!-- 미리듣기 숨김
     <div class="pt-3 border-t border-zinc-200 dark:border-zinc-700 flex justify-center">
       <SoundPreview />
     </div>
+    -->
   </div>
 </div>

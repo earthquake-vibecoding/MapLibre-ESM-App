@@ -118,6 +118,18 @@ export function getDetectionLog(): DetectionLogEntry[] {
   }
 }
 
+/** 서버 감지 전환: 종료 엔트리를 SSE(detect-runner)로 수신해 저장 — 로컬 판정 폐지 */
+export function appendDetectionEntry(entry: DetectionLogEntry): void {
+  if (!entry || typeof entry.start !== 'number') return;
+  const entries = getDetectionLog();
+  entries.unshift({ ...entry });
+  try {
+    localStorage.setItem(KEY, JSON.stringify(entries.slice(0, MAX_ENTRIES)));
+  } catch {
+    // quota/private mode — 무음
+  }
+}
+
 export function clearDetectionLog(): void {
   try {
     localStorage.removeItem(KEY);

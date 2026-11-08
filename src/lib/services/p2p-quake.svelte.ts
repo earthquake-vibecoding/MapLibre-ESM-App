@@ -1,14 +1,11 @@
 import type { P2PQuakeItem } from '../models';
 import { jmaShortAtLeast } from '../quake/jma-utils';
-import { connectWithRetry, type WsRetryHandle } from './ws-connect';
 import { TIMING, NET } from '../config';
 
 export class P2pQuakeService {
   p2pQuakeData = $state<P2PQuakeItem | null>(null);
   p2pHistoryList = $state<P2PQuakeItem[]>([]);
   selectedQuake = $state<P2PQuakeItem | null>(null);
-
-  private wsHandle: WsRetryHandle | null = null;
 
   private sortHistory(list: P2PQuakeItem[]): P2PQuakeItem[] {
     return [...list].sort((a, b) => {
@@ -61,65 +58,49 @@ export class P2pQuakeService {
     return [];
   }
 
-  connectWebSocket(
-    onNewQuake: (data: P2PQuakeItem) => void,
-    onEewReceived: (mappedEew: any) => void
-  ) {
-    if (typeof WebSocket === 'undefined') return;
-    this.wsHandle?.disconnect();
-    this.wsHandle = connectWithRetry(NET.p2pWs, {
-      name: 'P2P',
-      onOpen: () => console.log('P2P WebSocket connected successfully'),
-      onMessage: (data) => this.handleMessage(data, onNewQuake, onEewReceived)
+  /** SSE 'quake' 수신 — 구 WS handleMessage 551 분기와 동일 (서버 p2p-feed.mjs가 릴레이) */
+  ingest551(data: any, onNewQuake: (d: P2PQuakeItem) => void): void {
+    if (data?.code !== 551) return;
+    this.p2pQuakeData = data;
+    this.selectedQuake = data;
+
+    const filtered = this.p2pHistoryList.filter(item => {
+      if (data.id && item.id === data.id) return false;
+      if (data.time && item.time === data.time) return false;
+      if (data.earthquake?.time && item.earthquake?.time === data.earthquake?.time && item.issue?.type === data.issue?.type) return false;
+      return true;
     });
+    this.p2pHistoryList = this.sortHistory([data, ...filtered]).slice(0, 100);
+
+    onNewQuake(data);
+
+    setTimeout(() => {
+      if (this.p2pQuakeData?.id === data.id) {
+        this.p2pQuakeData = null;
+      }
+    }, TIMING.p2pKeepMs);
   }
 
-  private handleMessage(data: any, onNewQuake: (d: P2PQuakeItem) => void, onEewReceived: (e: any) => void): void {
-    if (data.code === 551) {
-      this.p2pQuakeData = data;
-      this.selectedQuake = data;
+  /** SSE 'eew'(kind p2p) 수신 — 구 handleMessage 556 분기와 동일 매핑. 556 외엔 null */
+  map556ToEew(data: any): any | null {
+    if (data?.code !== 556) return null;
+    const maxScaleFrom = Math.max(...(data.areas?.map((a: any) => a.scaleFrom) || [0]));
 
-      const filtered = this.p2pHistoryList.filter(item => {
-        if (data.id && item.id === data.id) return false;
-        if (data.time && item.time === data.time) return false;
-        if (data.earthquake?.time && item.earthquake?.time === data.earthquake?.time && item.issue?.type === data.issue?.type) return false;
-        return true;
-      });
-      this.p2pHistoryList = this.sortHistory([data, ...filtered]).slice(0, 100);
-
-      onNewQuake(data);
-
-      setTimeout(() => {
-        if (this.p2pQuakeData?.id === data.id) {
-          this.p2pQuakeData = null;
-        }
-      }, TIMING.p2pKeepMs);
-    } else if (data.code === 556) {
-      const maxScaleFrom = Math.max(...(data.areas?.map((a: any) => a.scaleFrom) || [0]));
-
-      const mappedEew = {
-        Title: '緊急地震速報 (P2P)',
-        Issue: { Status: '通常' },
-        AnnouncedTime: data.time,
-        OriginTime: data.earthquake?.originTime,
-        Hypocenter: data.earthquake?.hypocenter?.name || '不明',
-        Latitude: data.earthquake?.hypocenter?.latitude || 0,
-        Longitude: data.earthquake?.hypocenter?.longitude || 0,
-        Depth: data.earthquake?.hypocenter?.depth || 0,
-        Magunitude: data.earthquake?.hypocenter?.magnitude || 0,
-        MaxIntensity: jmaShortAtLeast(maxScaleFrom),
-        areas: data.areas ?? [], // 예보구역 — buildAreaScaleMap이 이걸로 지역 색칠 (누락 시 EEW 지역 색칠이 죽음)
-        isWarn: false,
-        isCancel: false
-      };
-
-      onEewReceived(mappedEew);
-    }
-  }
-
-  disconnect() {
-    this.wsHandle?.disconnect();
-    this.wsHandle = null;
+    return {
+      Title: '緊急地震速報 (P2P)',
+      Issue: { Status: '通常' },
+      AnnouncedTime: data.time,
+      OriginTime: data.earthquake?.originTime,
+      Hypocenter: data.earthquake?.hypocenter?.name || '不明',
+      Latitude: data.earthquake?.hypocenter?.latitude || 0,
+      Longitude: data.earthquake?.hypocenter?.longitude || 0,
+      Depth: data.earthquake?.hypocenter?.depth || 0,
+      Magunitude: data.earthquake?.hypocenter?.magnitude || 0,
+      MaxIntensity: jmaShortAtLeast(maxScaleFrom),
+      areas: data.areas ?? [], // 예보구역 — buildAreaScaleMap이 이걸로 지역 색칠 (누락 시 EEW 지역 색칠이 죽음)
+      isWarn: false,
+      isCancel: false
+    };
   }
 }
 

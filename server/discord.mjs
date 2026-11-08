@@ -31,8 +31,3 @@ export function detectPayload(embed, image) {
   }
   return JSON.stringify({ embeds: [embed] });
 }
-
-/** 웹후크 미설정/쿨다운 등 기능 꺼짐 응답 */
-export function disabled(res) {
-  res.status(204).end();
-}

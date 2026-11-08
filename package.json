@@ -4,8 +4,9 @@
   "type": "module",
   "main": "main.cjs",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "pnpm run build:detect && vite",
+    "build": "pnpm run build:detect && vite build",
+    "build:detect": "esbuild server/detect-entry.ts --bundle --format=esm --outfile=server/detect-core.mjs --log-level=error --inject:./server/state-shim.js --define:\\$state=__stateShim",
     "preview": "vite preview",
     "start": "node server/index.mjs",
     "test": "vitest run",
