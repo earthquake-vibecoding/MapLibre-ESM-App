@@ -109,6 +109,7 @@
     <QuakeDetailPanel
       quake={p2pQuakeService.selectedQuake}
       stationMap={ui.stationMap}
+      areaData={app.areaData}
       onFocusEpicenter={(item) => app.focusEpicenter(item)}
       onFocusStation={(st) => app.onFocusStation(st)}
     />

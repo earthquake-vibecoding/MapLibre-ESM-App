@@ -44,6 +44,14 @@ export function isEewCoordValid(eew: any): boolean {
     && isJapanCoord(eew.Longitude, eew.Latitude);
 }
 
+/** p2p 551 지진 정보의 진원 좌표 유효성 — 진앙지 이동·자동 줌 폴백이 공용 */
+export function isHypocenterValid(item: any): boolean {
+  const hyp = item?.earthquake?.hypocenter;
+  return !!hyp && typeof hyp.latitude === 'number' && typeof hyp.longitude === 'number'
+    && hyp.latitude !== 0 && hyp.longitude !== 0
+    && isJapanCoord(hyp.longitude, hyp.latitude);
+}
+
 export function isActiveEEW(eew: any): boolean {
   if (!eew) return false;
   if (eew.isCancel) return false;

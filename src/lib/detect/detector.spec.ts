@@ -46,8 +46,8 @@ describe('jma-utils 단일 테이블 일관성', () => {
   });
 
   it('scaleToJmaString 경계값', () => {
-    expect(getIntensityColor(70)).toBe('#990099');
-    expect(getIntensityColor(60)).toBe('#A00000');
-    expect(getIntensityColor(45)).toBe('#FF9900');
+    expect(getIntensityColor(70)).toBe('#A00020');
+    expect(getIntensityColor(60)).toBe('#E02020');
+    expect(getIntensityColor(45)).toBe('#80C000');
   });
 });

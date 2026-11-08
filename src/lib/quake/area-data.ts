@@ -4,6 +4,7 @@ export interface AreaData {
   areaForecastGeoJSON: any;
   stationToAreaCode: Map<string, string>;
   areaNameToCode: Map<string, string>;
+  areaCodeToPref: Map<string, string>; // 예보구역코드 → 도도부현명 (지역별 탭 라벨)
 }
 
 export async function loadAreaData(): Promise<AreaData> {
@@ -24,6 +25,7 @@ export async function loadAreaData(): Promise<AreaData> {
 
   const stationToAreaCode = new Map<string, string>();
   const areaNameToCode = new Map<string, string>();
+  const areaCodeToPref = new Map<string, string>();
 
   if (Array.isArray(stations)) {
     for (const st of stations) {
@@ -45,6 +47,7 @@ export async function loadAreaData(): Promise<AreaData> {
       }
 
       if (st.area?.code) {
+        if (st.pref?.name) areaCodeToPref.set(st.area.code, st.pref.name);
         if (st.name) stationToAreaCode.set(st.name, st.area.code);
         if (st.city?.name) stationToAreaCode.set(st.city.name, st.area.code);
         if (st.area.name) areaNameToCode.set(st.area.name, st.area.code);
@@ -68,5 +71,5 @@ export async function loadAreaData(): Promise<AreaData> {
     }
   }
 
-  return { areaForecastGeoJSON, stationToAreaCode, areaNameToCode };
+  return { areaForecastGeoJSON, stationToAreaCode, areaNameToCode, areaCodeToPref };
 }

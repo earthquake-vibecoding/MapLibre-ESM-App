@@ -16,15 +16,15 @@ export interface JmaLevel {
 }
 
 export const JMA_LEVELS: JmaLevel[] = [
-  { scale: 10, threshold: 0.5, label: '진도 1', short: '1',   color: '#7F8C8D', snd: 1 },
-  { scale: 20, threshold: 1.5, label: '진도 2', short: '2',   color: '#0055FF', snd: 2 },
-  { scale: 30, threshold: 2.5, label: '진도 3', short: '3',   color: '#00BFFF', snd: 3 },
-  { scale: 40, threshold: 3.5, label: '진도 4', short: '4',   color: '#FFE600', snd: 4 },
-  { scale: 45, threshold: 4.5, label: '진도 5弱', short: '5弱', color: '#FF9900', snd: 5 },
-  { scale: 50, threshold: 5.0, label: '진도 5強', short: '5強', color: '#FF5500', snd: 5.5 },
-  { scale: 55, threshold: 5.5, label: '진도 6弱', short: '6弱', color: '#FF0000', snd: 6 },
-  { scale: 60, threshold: 6.0, label: '진도 6強', short: '6強', color: '#A00000', snd: 6.5 },
-  { scale: 70, threshold: 6.5, label: '진도 7', short: '7',   color: '#990099', snd: 7 }
+  { scale: 10, threshold: 0.5, label: '진도 1', short: '1',   color: '#A0E0FF', snd: 1 },
+  { scale: 20, threshold: 1.5, label: '진도 2', short: '2',   color: '#A0D0FF', snd: 2 },
+  { scale: 30, threshold: 2.5, label: '진도 3', short: '3',   color: '#B0C0FF', snd: 3 },
+  { scale: 40, threshold: 3.5, label: '진도 4', short: '4',   color: '#70E080', snd: 4 },
+  { scale: 45, threshold: 4.5, label: '진도 5弱', short: '5弱', color: '#80C000', snd: 5 },
+  { scale: 50, threshold: 5.0, label: '진도 5強', short: '5強', color: '#F08000', snd: 5.5 },
+  { scale: 55, threshold: 5.5, label: '진도 6弱', short: '6弱', color: '#D07000', snd: 6 },
+  { scale: 60, threshold: 6.0, label: '진도 6強', short: '6強', color: '#E02020', snd: 6.5 },
+  { scale: 70, threshold: 6.5, label: '진도 7', short: '7',   color: '#A00020', snd: 7 }
 ];
 
 function levelByScale(scale: number): JmaLevel | null {
@@ -63,17 +63,18 @@ export interface JindoBadgeStyle {
   label: string;
 }
 
-// 배지 프레젠테이션 클래스 (색상 로직은 JMA_LEVELS.color와 별개 — Tailwind 클래스 제약)
+// 배지 프레젠테이션 클래스 — JMA 공식 팔레트와 동일 색 (Tailwind 기본 팔레트에 없어 임의값 클래스)
+// 밝은 계급(1~5弱)은 어두운 글자, 5強 이상은 흰 글자
 const BADGE_CLASSES: Record<number, { bg: string; text: string; border: string }> = {
-  10: { bg: 'bg-emerald-600', text: 'text-white', border: 'border-emerald-400' },
-  20: { bg: 'bg-emerald-500', text: 'text-white', border: 'border-emerald-300' },
-  30: { bg: 'bg-cyan-600', text: 'text-white', border: 'border-cyan-400' },
-  40: { bg: 'bg-amber-500', text: 'text-zinc-950', border: 'border-amber-300' },
-  45: { bg: 'bg-orange-600', text: 'text-white', border: 'border-orange-400' },
-  50: { bg: 'bg-rose-600', text: 'text-white', border: 'border-rose-400' },
-  55: { bg: 'bg-red-600', text: 'text-white', border: 'border-red-400' },
-  60: { bg: 'bg-red-700', text: 'text-white', border: 'border-red-500' },
-  70: { bg: 'bg-purple-700', text: 'text-white', border: 'border-purple-400' }
+  10: { bg: 'bg-[#A0E0FF]', text: 'text-sky-950', border: 'border-[#A0E0FF]' },
+  20: { bg: 'bg-[#A0D0FF]', text: 'text-sky-950', border: 'border-[#A0D0FF]' },
+  30: { bg: 'bg-[#B0C0FF]', text: 'text-indigo-950', border: 'border-[#B0C0FF]' },
+  40: { bg: 'bg-[#70E080]', text: 'text-emerald-950', border: 'border-[#70E080]' },
+  45: { bg: 'bg-[#80C000]', text: 'text-zinc-950', border: 'border-[#80C000]' },
+  50: { bg: 'bg-[#F08000]', text: 'text-white', border: 'border-[#F08000]' },
+  55: { bg: 'bg-[#D07000]', text: 'text-white', border: 'border-[#D07000]' },
+  60: { bg: 'bg-[#E02020]', text: 'text-white', border: 'border-[#E02020]' },
+  70: { bg: 'bg-[#A00020]', text: 'text-white', border: 'border-[#A00020]' }
 };
 
 export function getJindoBadgeStyle(scale: number | undefined): JindoBadgeStyle {

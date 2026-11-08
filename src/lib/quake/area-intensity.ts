@@ -1,4 +1,5 @@
 import { getIntensityColor, getJindoString } from './jma-utils';
+import type { AreaData } from './area-data';
 
 function norm(s: string): string {
   return s ? s.replace(/県|府|都|道| /g, '') : '';
@@ -63,6 +64,28 @@ export function buildAreaScaleMap(
   }
 
   return areaScaleMap;
+}
+
+export interface AreaIntensityRow {
+  name: string;
+  pref: string;
+  scale: number;
+}
+
+/** 지역별(예보구역) 최대진도 목록 — 지도 색칠과 동일 파생(points/areas → 지역코드별 최대 진도).
+ *  p2p 551엔 areas 필드 자체가 없으므로(556 EEW 전용) 이 파생이 지역별 탭의 유일한 데이터 출처. */
+export function buildAreaIntensityRows(quakeData: any, areaData: AreaData): AreaIntensityRow[] {
+  const areaScaleMap = buildAreaScaleMap(quakeData, areaData.areaNameToCode, areaData.stationToAreaCode);
+  const rows: AreaIntensityRow[] = [];
+  if (!Array.isArray(areaData.areaForecastGeoJSON?.features)) return rows;
+  for (const f of areaData.areaForecastGeoJSON.features) {
+    const code = f.properties?.code;
+    const scale = areaScaleMap.get(code);
+    if (scale && scale >= 10) {
+      rows.push({ name: f.properties.name || '', pref: areaData.areaCodeToPref.get(code) || '', scale });
+    }
+  }
+  return rows.sort((a, b) => b.scale - a.scale || a.name.localeCompare(b.name, 'ja'));
 }
 
 export function buildStationFeatures(points: any[], stationMap: Map<string, any>): any[] {

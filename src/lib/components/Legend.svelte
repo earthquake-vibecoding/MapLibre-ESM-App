@@ -1,19 +1,11 @@
 <script lang="ts">
   import { t } from '../i18n/i18n';
+  import { JMA_LEVELS } from '../quake/jma-utils';
 
   let open = $state(true);
 
-  const entries: { c: string; l: string }[] = [
-    { c: '#990099', l: '7' },
-    { c: '#A00000', l: '6강' },
-    { c: '#FF0000', l: '6약' },
-    { c: '#FF5500', l: '5강' },
-    { c: '#FF9900', l: '5약' },
-    { c: '#FFE600', l: '4' },
-    { c: '#00BFFF', l: '3' },
-    { c: '#0055FF', l: '2' },
-    { c: '#7F8C8D', l: '1' }
-  ];
+  // 색은 JMA_LEVELS 단일 출처에서 파생 — 팔레트 변경 시 범례가 같이 따라감
+  const entries: { c: string; l: string }[] = [...JMA_LEVELS].reverse().map(lv => ({ c: lv.color, l: lv.short }));
 </script>
 
 <div class="absolute bottom-4 right-4 z-20 hidden md:flex text-xs">

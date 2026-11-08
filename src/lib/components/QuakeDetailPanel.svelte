@@ -1,17 +1,20 @@
 <script lang="ts">
   import type { P2PQuakeItem } from '../models';
   import { getJindoBadgeStyle, getTsunamiText, getJindoString } from '../quake/jma-utils';
+  import { buildAreaIntensityRows } from '../quake/area-intensity';
+  import type { AreaData } from '../quake/area-data';
   import type { StationLocation } from '../map/map-marker';
   import { t } from '../i18n/i18n';
 
   interface Props {
     quake: P2PQuakeItem | null;
     stationMap: Map<string, any>;
+    areaData: AreaData | null;
     onFocusEpicenter: (item: P2PQuakeItem) => void;
     onFocusStation: (st: StationLocation) => void;
   }
 
-  let { quake, stationMap, onFocusEpicenter, onFocusStation }: Props = $props();
+  let { quake, stationMap, areaData, onFocusEpicenter, onFocusStation }: Props = $props();
 
   let showDetail = $state(false);
   let viewMode = $state<'stations' | 'areas'>('stations');
@@ -21,6 +24,9 @@
     const key = (pt.pref || '') + pt.addr;
     return stationMap.get(key) || stationMap.get(pt.addr) || null;
   }
+
+  // 지역별 목록 — p2p 551엔 areas 필드가 없으므로 points에서 예보구역별 최대진도를 파생 (지도 색칠과 동일 로직)
+  const areaRows = $derived(quake && areaData ? buildAreaIntensityRows(quake, areaData) : []);
 
   const getRawData = (item: P2PQuakeItem) => JSON.stringify(item, null, 2);
   const chip = 'bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded border border-zinc-200 dark:border-zinc-700';
@@ -95,7 +101,7 @@
             <button
               onclick={() => (viewMode = 'areas')}
               class={'flex-1 py-1.5 px-2.5 rounded transition-colors cursor-pointer ' + (viewMode === 'areas' ? 'bg-white text-blue-600 dark:bg-zinc-700 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200')}>
-              {t('지역별 ({n})', { n: item.areas?.length || 0 })}
+              {t('지역별 ({n})', { n: areaRows.length })}
             </button>
           </div>
 
@@ -139,16 +145,16 @@
           {/if}
 
           {#if viewMode === 'areas'}
-            {#if item.areas && item.areas.length > 0}
+            {#if areaRows.length > 0}
               <div class="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
-                {#each item.areas as area, i ((area.name ?? '') + i)}
+                {#each areaRows as area, i (area.name + i)}
                   <div class="flex items-center justify-between py-2">
                     <div class="flex items-center gap-2 min-w-0">
-                      <span class="text-xs font-bold text-zinc-400 shrink-0">{area.prefName}</span>
+                      <span class="text-xs font-bold text-zinc-400 shrink-0">{area.pref}</span>
                       <span class="text-sm font-semibold text-zinc-800 dark:text-zinc-200 truncate">{area.name}</span>
                     </div>
-                    <div class={'px-2 py-1 rounded text-xs font-bold shrink-0 ' + getJindoBadgeStyle(area.scale || area.scaleFrom).bg + ' ' + getJindoBadgeStyle(area.scale || area.scaleFrom).text}>
-                      {getJindoString(area.scale || area.scaleFrom)}
+                    <div class={'px-2 py-1 rounded text-xs font-bold shrink-0 ' + getJindoBadgeStyle(area.scale).bg + ' ' + getJindoBadgeStyle(area.scale).text}>
+                      {getJindoString(area.scale)}
                     </div>
                   </div>
                 {/each}

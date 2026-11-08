@@ -1,5 +1,5 @@
 import type { MapController } from './map/map-controller';
-import { isEewCoordValid } from './quake/quake-utils';
+import { isEewCoordValid, isHypocenterValid } from './quake/quake-utils';
 import { VIEW } from './config';
 
 export function focusActiveGrids(mapCtl: MapController | null, stationsState: Map<string, any>): boolean {
@@ -85,23 +85,21 @@ export function focusOnEarthquake(
       return;
     }
   }
-  // 색칠 영역이 없으면 전체 뷰로 복귀
-  mapCtl.fitFullView(1000);
+  // 색칠 영역이 없으면(진원정도 단독 보고·points 매칭 실패 등): 진원이 유효하면 진원으로 플라이, 아니면 전체 뷰
+  if (isHypocenterValid(item)) {
+    const hyp = item.earthquake.hypocenter;
+    mapCtl.flyTo({ center: [hyp.longitude, hyp.latitude], ...VIEW.epicenterFly });
+  } else {
+    mapCtl.fitFullView(1000);
+  }
 }
 
 /** 진앙지 이동 버튼 전용: 진원지로 플라이 */
 export function focusOnEpicenter(mapCtl: MapController | null, item: any): void {
   if (!mapCtl || !item) return;
-  const hyp = item?.earthquake?.hypocenter;
-  const isValidHyp = hyp && typeof hyp.latitude === 'number' && typeof hyp.longitude === 'number' &&
-    hyp.latitude > 0 && hyp.longitude > 0 &&
-    hyp.latitude >= 20 && hyp.latitude <= 55 &&
-    hyp.longitude >= 120 && hyp.longitude <= 155;
-  if (isValidHyp) {
-    mapCtl.flyTo({
-      center: [hyp.longitude, hyp.latitude],
-      ...VIEW.epicenterFly
-    });
+  if (isHypocenterValid(item)) {
+    const hyp = item.earthquake.hypocenter;
+    mapCtl.flyTo({ center: [hyp.longitude, hyp.latitude], ...VIEW.epicenterFly });
   } else {
     mapCtl.fitFullView(1000);
   }

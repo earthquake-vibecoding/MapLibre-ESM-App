@@ -22,7 +22,7 @@ describe('jma-utils', () => {
   });
 
   it('should return intensity color', () => {
-    expect(getIntensityColor(70)).toBe('#990099');
+    expect(getIntensityColor(70)).toBe('#A00020');
   });
 
   it('should parse black as -3 jindo', () => {
