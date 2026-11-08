@@ -15,9 +15,9 @@ let isQuitting = false;
 async function resolveStartUrl() {
   const devUrl = process.env.ELECTRON_START_URL;
   if (devUrl) return devUrl;
-  // prod: dist 정적 빌드 + /api 서버를 같이 띄움
+  // prod: dist 정적 빌드 + /api 서버를 같이 띄움 — 로컬 전용이라 루프백에만 바인딩 (LAN 노출 방지)
   const { startServer } = await import('./server/index.mjs');
-  await startServer(3000);
+  await startServer(3000, '127.0.0.1');
   return 'http://127.0.0.1:3000';
 }
 

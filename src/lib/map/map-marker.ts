@@ -1,5 +1,6 @@
 import { getIntensityColor, getJindoString } from '../quake/jma-utils';
 import { ui } from '../state.svelte';
+import { t } from '../i18n/i18n';
 
 export interface StationLocation {
   lat: number;
@@ -36,7 +37,7 @@ export function createStationHighlightMarker(map: any, Marker: any, st: StationL
     <div class="relative flex items-center justify-center pointer-events-none">
       <span class="animate-ping absolute inline-flex h-12 w-12 rounded-full opacity-75" style="background-color: ${color}"></span>
       <span class="relative inline-flex rounded-full px-3 py-1 border-2 border-white shadow-2xl items-center justify-center text-xs font-black text-white" style="background-color: ${color}">
-        📍 ${st.pref ? st.pref + ' ' : ''}${st.name} (진도 ${jindoStr})
+        📍 ${st.pref ? st.pref + ' ' : ''}${st.name} (${t('진도')} ${jindoStr})
       </span>
     </div>
   `;

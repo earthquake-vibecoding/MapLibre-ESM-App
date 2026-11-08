@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { P2PQuakeItem, ProcessedHistoryItem } from '../models';
   import { getJindoBadgeStyle } from '../quake/jma-utils';
+  import { t } from '../i18n/i18n';
 
   interface Props {
     historyList: P2PQuakeItem[];
@@ -30,17 +31,17 @@
   <div class="border-l border-zinc-200 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 h-full p-4 flex flex-col gap-3">
 
     <div class="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-zinc-700">
-      <h2 class="font-bold text-sm">지진 발생 이력 <span class="text-xs font-normal text-zinc-400">({historyList.length}건)</span></h2>
+      <h2 class="font-bold text-sm">{t('지진 발생 이력')} <span class="text-xs font-normal text-zinc-400">({t('{n}건', { n: historyList.length })})</span></h2>
       <div class="flex items-center gap-2">
         <button
           onclick={onToggleGroupUnknown}
           class={'text-[11px] font-bold px-2 py-1 rounded-md border transition-colors cursor-pointer ' + (groupUnknown ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-zinc-500 border-zinc-300 hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-400 dark:border-zinc-700 dark:hover:bg-zinc-800')}>
-          그룹화 {groupUnknown ? 'ON' : 'OFF'}
+          {t('그룹화')} {groupUnknown ? 'ON' : 'OFF'}
         </button>
         <button
           onclick={onCloseDrawer}
-          title="닫기"
-          aria-label="닫기"
+          title={t('닫기')}
+          aria-label={t('닫기')}
           class="p-1 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 cursor-pointer">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
@@ -65,16 +66,16 @@
               <div class="flex items-center gap-2 text-[11px] font-mono text-zinc-400">
                 <span>{item.earthquake?.time || item.time}</span>
                 {#if item.earthquake?.domesticTsunami && item.earthquake?.domesticTsunami !== 'None'}
-                  <span class="text-[10px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-700 font-bold dark:bg-amber-950 dark:text-amber-400">해일</span>
+                  <span class="text-[10px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-700 font-bold dark:bg-amber-950 dark:text-amber-400">{t('해일')}</span>
                 {/if}
               </div>
               <div class="font-bold text-sm text-zinc-800 dark:text-zinc-100 truncate">
-                {item.earthquake?.hypocenter?.name || '진원지 미상'}
+                {item.earthquake?.hypocenter?.name || t('진원지 미상')}
               </div>
               <div class="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-                <span>규모 <strong class="text-rose-600 dark:text-rose-400">M{item.earthquake?.hypocenter?.magnitude === -1 ? '불명' : item.earthquake?.hypocenter?.magnitude}</strong></span>
+                <span>{t('규모')} <strong class="text-rose-600 dark:text-rose-400">M{item.earthquake?.hypocenter?.magnitude === -1 ? t('불명') : item.earthquake?.hypocenter?.magnitude}</strong></span>
                 <span>·</span>
-                <span>깊이 {item.earthquake?.hypocenter?.depth === -1 ? '불명' : (item.earthquake?.hypocenter?.depth === 0 ? '매우 얕음' : item.earthquake?.hypocenter?.depth + 'km')}</span>
+                <span>{t(item.earthquake?.hypocenter?.depth === -1 ? '깊이 불명' : (item.earthquake?.hypocenter?.depth === 0 ? '깊이 매우 얕음' : '깊이 {d}km'), { d: item.earthquake?.hypocenter?.depth })}</span>
               </div>
             </div>
 
@@ -96,12 +97,12 @@
               class="flex items-center justify-between gap-3 cursor-pointer focus-visible:outline-2 focus-visible:outline-blue-600">
               <div class="flex flex-col min-w-0 flex-1 gap-1">
                 <div class="flex items-center gap-2 text-[11px] font-mono text-zinc-400">
-                  <span class="px-1.5 py-0.5 rounded bg-blue-600 text-white font-bold text-[10px]">그룹</span>
+                  <span class="px-1.5 py-0.5 rounded bg-blue-600 text-white font-bold text-[10px]">{t('그룹')}</span>
                   <span>{group.latestItem?.earthquake?.time || group.latestItem?.time}</span>
                 </div>
                 <div class="font-bold text-sm text-blue-700 dark:text-blue-400 flex items-center gap-2 truncate">
-                  <span class="truncate">{group.latestItem?.earthquake?.hypocenter?.name || '진원지 미상'} / M{group.latestItem?.earthquake?.hypocenter?.magnitude === -1 ? '불명' : group.latestItem?.earthquake?.hypocenter?.magnitude}</span>
-                  <span class="text-xs px-1.5 py-0.2 rounded-full bg-blue-100 text-blue-700 font-mono shrink-0 dark:bg-blue-950 dark:text-blue-300">{group.items?.length}건</span>
+                  <span class="truncate">{group.latestItem?.earthquake?.hypocenter?.name || t('진원지 미상')} / M{group.latestItem?.earthquake?.hypocenter?.magnitude === -1 ? t('불명') : group.latestItem?.earthquake?.hypocenter?.magnitude}</span>
+                  <span class="text-xs px-1.5 py-0.2 rounded-full bg-blue-100 text-blue-700 font-mono shrink-0 dark:bg-blue-950 dark:text-blue-300">{t('{n}건', { n: group.items?.length })}</span>
                 </div>
               </div>
               <div class="flex items-center gap-2 shrink-0">
@@ -111,7 +112,7 @@
                 <button
                   onclick={(e) => onToggleGroup(group.groupKey || '', e)}
                   class="px-2 py-1 rounded-md bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 text-xs font-bold transition-colors cursor-pointer">
-                  {expanded ? '접기' : '펼치기'}
+                  {expanded ? t('접기') : t('펼치기')}
                 </button>
               </div>
             </div>
@@ -130,11 +131,11 @@
                     <div class="flex flex-col gap-0.5 min-w-0 flex-1">
                       <span class="font-mono text-[10px] text-zinc-400">{subItem.earthquake?.time || subItem.time}</span>
                       <span class="font-bold text-zinc-700 dark:text-zinc-200 truncate">
-                        {subItem.earthquake?.hypocenter?.name || '진원지 미상'}
+                        {subItem.earthquake?.hypocenter?.name || t('진원지 미상')}
                         {#if subItem.issue?.type === 'ScalePrompt'}
-                          <span class="text-[10px] text-amber-600 dark:text-amber-400">(진도속보)</span>
+                          <span class="text-[10px] text-amber-600 dark:text-amber-400">({t('진도속보')})</span>
                         {:else if subItem.issue?.type === 'Destination'}
-                          <span class="text-[10px] text-emerald-600 dark:text-emerald-400">(진원정보)</span>
+                          <span class="text-[10px] text-emerald-600 dark:text-emerald-400">({t('진원정보')})</span>
                         {/if}
                       </span>
                     </div>
@@ -154,7 +155,7 @@
         onclick={onLoadMore}
         class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-md transition-colors cursor-pointer w-full"
       >
-        더 보기
+        {t('더 보기')}
       </button>
     </div>
   </div>

@@ -64,6 +64,7 @@ export const KEYS = {
   notifyEnabled: 'browser_notifications_enabled',
   favorites: 'station_favorites',
   detectionLog: 'detection_log',
+  locale: 'eq_locale',
 } as const;
 
 /** EEW 시뮬레이션 진원 (임의의 후지산 인근 고정점) */

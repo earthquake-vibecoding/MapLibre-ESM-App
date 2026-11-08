@@ -4,10 +4,10 @@ import { computeWaveState, type SeismicTable } from './detect/seismic';
 import { fetchLatestTime, type RealtimeHost } from './detect/realtime-img';
 import { clearDetectedEvents } from './detect/grid';
 import { reportAlertStatus } from './electron-bridge';
-import { TIMING } from './config';
-import { accumulateExpiredEvent, finishDetectionEpisode } from './detect/detection-log';
+import { accumulateExpiredEvent, finishDetectionEpisode, collectLiveEpisode } from './detect/detection-log';
 import { takeDetectSnapshot } from './detect/detect-snapshot';
-import { reportDetectionEpisode } from './services/webhook';
+import { reportDetectionEpisode, reportDetectionStart } from './services/webhook';
+import { WEBHOOK, TIMING } from './config';
 import type { MapController } from './map/map-controller';
 
 export interface TickerHost extends RealtimeHost {
@@ -26,6 +26,8 @@ export class Ticker {
   private lastWaveRenderTime = 0;
   private lastMaskRenderTime = 0;
   private wavesActive = false;
+  private wasDetecting = false; // 감지 시작 엣지 검출용 (0→N 전환 1회)
+  private pendingStart = false; // 시작 리포트 대기 (진도 미달로 미발송 시 상승하면 보내게)
 
   constructor(private host: TickerHost) {}
 
@@ -92,6 +94,18 @@ export class Ticker {
         activeCount++;
       }
     }
+
+    // 감지 시작 엣지 — 흔들림 감지 즉시 Discord 리포트(라이브 상태 + 지도 스냅샷)
+    if (activeCount > 0 && !this.wasDetecting) this.pendingStart = true;
+    this.wasDetecting = activeCount > 0;
+    if (this.pendingStart && activeCount > 0) {
+      const live = collectLiveEpisode(this.host.stationsState);
+      if (live && live.maxJindo >= WEBHOOK.minJindo) {
+        this.pendingStart = false;
+        reportDetectionStart(live, takeDetectSnapshot());
+      }
+    }
+
     if (activeCount > 0 && mapCtl) {
       mapCtl.blinkDetected(Math.floor(now / TIMING.blinkMs) % 2 === 0);
     }

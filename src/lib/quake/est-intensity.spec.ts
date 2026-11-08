@@ -11,7 +11,7 @@ describe('감쇠식 (Si & Midorikawa)', () => {
 
   it('실측 앵커: 구마모토 M7.3 진앙 인근 → 진도 7', () => {
     const j = estJindoAt(7.3, 10, 5);
-    expect(jindoToScale(j)).toBe(60);
+    expect(jindoToScale(j)).toBe(70);
   });
 
   it('거리가 멀수록 진도 단조 감소', () => {

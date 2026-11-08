@@ -9,8 +9,26 @@ import apiRouter from './api.mjs';
 
 const distDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist');
 
-export function startServer(port = Number(process.env.PORT) || 3000) {
+// 보안 헤더 — 웹 배포 기준. Electron(http://127.0.0.1)에도 동일 적용되지만 무해.
+// connect-src: 클라이언트가 직접 붙는 외부 채널(P2PQuake HTTPS/WS, Wolfx WS, USGS 피드)
+const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Strict-Transport-Security': 'max-age=31536000',
+  'Referrer-Policy': 'no-referrer',
+  'Content-Security-Policy':
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; " +
+    "connect-src 'self' https://api.p2pquake.net wss://api.p2pquake.net wss://ws-api.wolfx.jp https://earthquake.usgs.gov; " +
+    "worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+};
+
+export function startServer(port = Number(process.env.PORT) || 3000, host = process.env.HOST || '0.0.0.0') {
   const app = express();
+  app.disable('x-powered-by');
+  app.use((req, res, next) => {
+    for (const [k, v] of Object.entries(SECURITY_HEADERS)) res.setHeader(k, v);
+    next();
+  });
   app.use('/api', apiRouter);
   // 해시된 assets만 1년 캐시, 나머지는 재검증 (데이터 파일 갱신이 묵히지 않게)
   app.use(express.static(distDir, {
@@ -34,7 +52,7 @@ export function startServer(port = Number(process.env.PORT) || 3000) {
     : app;
 
   return new Promise((resolve, reject) => {
-    const server = listener.listen(port, '0.0.0.0', () => resolve(server));
+    const server = listener.listen(port, host, () => resolve(server));
     server.on('error', reject);
   });
 }

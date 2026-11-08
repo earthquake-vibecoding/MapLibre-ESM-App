@@ -35,7 +35,7 @@ describe('jma-utils 단일 테이블 일관성', () => {
   it('jindoToScale ↔ getIntensityColor 상호 일치', () => {
     const cases: [number, number][] = [
       [0.5, 10], [1.5, 20], [2.5, 30], [3.5, 40],
-      [4.5, 45], [5.0, 46], [5.5, 50], [6.0, 55], [6.5, 60]
+      [4.5, 45], [5.0, 50], [5.5, 55], [6.0, 60], [6.5, 70]
     ];
     for (const [jindo, scale] of cases) {
       expect(jindoToScale(jindo)).toBe(scale);
@@ -46,8 +46,8 @@ describe('jma-utils 단일 테이블 일관성', () => {
   });
 
   it('scaleToJmaString 경계값', () => {
-    expect(getIntensityColor(60)).toBe('#990099');
-    expect(getIntensityColor(55)).toBe('#A00000');
+    expect(getIntensityColor(70)).toBe('#990099');
+    expect(getIntensityColor(60)).toBe('#A00000');
     expect(getIntensityColor(45)).toBe('#FF9900');
   });
 });

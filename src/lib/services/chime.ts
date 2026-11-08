@@ -19,7 +19,7 @@ export function parseScale(scale: number | string | undefined): number {
     if (!isNaN(num)) return parseScale(num);
   }
   if (typeof scale === 'number') {
-    const snd = scaleToSnd(scale); // 진도 코드(10/20/…/60) → 표 단일 출처
+    const snd = scaleToSnd(scale); // 진도 코드(10/20/…/70) → 표 단일 출처
     if (snd !== null) return snd;
     if (scale >= 1 && scale <= 7) return scale;
     if (scale > 7) return 7;

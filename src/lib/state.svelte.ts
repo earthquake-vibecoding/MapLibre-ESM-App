@@ -3,6 +3,24 @@ import { KEYS } from './config';
 export type Tab = 'realtime' | 'earthquake' | 'overseas';
 export type IntensityDisplayMode = 'areas' | 'stations' | 'both';
 export type RealtimeDataType = 'jma_s' | 'jma_b';
+export type Locale = 'ko' | 'en' | 'ja';
+
+const LOCALES: Locale[] = ['ko', 'en', 'ja'];
+
+function loadLocale(): Locale {
+  try {
+    const saved = localStorage.getItem(KEYS.locale);
+    if (saved && (LOCALES as string[]).includes(saved)) return saved as Locale;
+  } catch {
+    // ignore
+  }
+  if (typeof navigator !== 'undefined' && navigator.language) {
+    if (navigator.language.startsWith('ja')) return 'ja';
+    if (navigator.language.startsWith('ko')) return 'ko';
+    return 'en';
+  }
+  return 'ko'; // node(테스트) 등 navigator 없는 환경
+}
 
 function loadTheme(): boolean {
   try {
@@ -31,6 +49,7 @@ function loadAlertFilter(): AreaFilter {
 
 export const ui = $state({
   activeTab: 'earthquake' as Tab,
+  locale: loadLocale(), // UI 언어 (ko/en/ja) — LanguageSettings에서 변경·저장
   isDarkMode: loadTheme(),
   isCleanMode: false,
   isGifExpanded: false,

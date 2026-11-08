@@ -1,5 +1,6 @@
 import { jmaShortAtLeast } from '../quake/jma-utils';
 import { TIMING, KEYS } from '../config';
+import { t } from '../i18n/i18n';
 
 export class NotificationService {
   permission = $state<NotificationPermission>('default');
@@ -32,8 +33,8 @@ export class NotificationService {
       this.permission = res;
       if (res === 'granted') {
         this.setEnabled(true);
-        this.sendNotification('🔔 지진 알림이 활성화되었습니다', {
-          body: '흔들림 감지, 지진 정보 및 EEW(긴급지진속보) 발생 시 브라우저 알림을 받게 됩니다.',
+        this.sendNotification(t('🔔 지진 알림이 활성화되었습니다'), {
+          body: t('흔들림 감지, 지진 정보 및 EEW(긴급지진속보) 발생 시 브라우저 알림을 받게 됩니다.'),
           tag: 'notification-test'
         });
         return true;
@@ -99,12 +100,12 @@ export class NotificationService {
   // 1. EEW (긴급지진속보) 알림
   notifyEew(eew: any): void {
     if (!eew) return;
-    const isSim = eew.isSimulation ? '[모의] ' : '';
-    const title = `🚨 ${isSim}EEW 긴급지진속보`;
-    const location = eew.Hypocenter || '지진 발생';
-    const mag = eew.Magunitude ? `M${eew.Magunitude}` : '규모 미상';
-    const maxInt = eew.MaxIntensity ? `최대진도 ${eew.MaxIntensity}` : '';
-    const body = `진원지: ${location} | ${mag} | ${maxInt}\n즉시 안전한 장소로 대피하십시오.`;
+    const isSim = eew.isSimulation ? t('[모의] ') : '';
+    const title = `🚨 ${isSim}${t('EEW 긴급지진속보')}`;
+    const location = eew.Hypocenter || t('지진 발생');
+    const mag = eew.Magunitude ? `M${eew.Magunitude}` : t('규모 미상');
+    const maxInt = eew.MaxIntensity ? t('최대진도 {v}', { v: eew.MaxIntensity }) : '';
+    const body = `${t('진원지: {v}', { v: location })} | ${mag} | ${maxInt}\n${t('즉시 안전한 장소로 대피하십시오.')}`;
 
     this.sendNotification(title, {
       body,
@@ -116,17 +117,17 @@ export class NotificationService {
   // 2. 지진 정보 (P2PQuake / Earthquake Info) 알림
   notifyQuake(quake: any): void {
     if (!quake) return;
-    const name = quake.earthquake?.hypocenter?.name || '지진 정보';
+    const name = quake.earthquake?.hypocenter?.name || t('지진 정보');
     const mag = quake.earthquake?.hypocenter?.magnitude;
     const magStr = mag !== undefined && mag !== -1 ? `M${mag}` : '';
     const depth = quake.earthquake?.hypocenter?.depth;
-    const depthStr = depth !== undefined && depth !== -1 ? `깊이 ${depth}km` : '';
+    const depthStr = depth !== undefined && depth !== -1 ? t('깊이 {d}km', { d: depth }) : '';
     const maxScale = quake.earthquake?.maxScale;
-    const maxScaleStr = maxScale !== undefined && maxScale !== -1 ? `최대진도 ${jmaShortAtLeast(maxScale)}` : '';
+    const maxScaleStr = maxScale !== undefined && maxScale !== -1 ? t('최대진도 {v}', { v: jmaShortAtLeast(maxScale) }) : '';
 
-    const title = `📢 신규 지진 정보`;
+    const title = t('📢 신규 지진 정보');
     const details = [name, magStr, depthStr, maxScaleStr].filter(Boolean).join(' | ');
-    const body = details ? details : '새로운 지진 정보가 수신되었습니다.';
+    const body = details ? details : t('새로운 지진 정보가 수신되었습니다.');
 
     this.sendNotification(title, {
       body,
@@ -142,8 +143,8 @@ export class NotificationService {
     if (now - this.lastShakingNotify < TIMING.notifyGapMs) return;
     this.lastShakingNotify = now;
 
-    const title = `⚡ 실시간 지진 흔들림 감지`;
-    const body = `관측망에서 진도 ${intensity} 수준의 주요 흔들림이 감지되었습니다.`;
+    const title = t('⚡ 실시간 지진 흔들림 감지');
+    const body = t('관측망에서 진도 {v} 수준의 주요 흔들림이 감지되었습니다.', { v: intensity });
 
     this.sendNotification(title, {
       body,

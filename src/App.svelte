@@ -22,6 +22,7 @@
   import StationPanel from './lib/components/StationPanel.svelte';
   import { isPanelMode, initPanelMode, initPanelBridge, sendPanelSelect, togglePanelWindow, hasPanelBridge } from './lib/panel-mode';
   import { VIEW } from './lib/config';
+  import { t } from './lib/i18n/i18n';
 
   let mapEl: HTMLElement | undefined = $state();
   let showTools = $state(false);
@@ -30,6 +31,11 @@
   // 선택 관측소 → 패널 창 동기화 (지도 클릭/오버레이 닫기 모두, null 포함). 패널 창 자신은 이쪽으로 보내지 않음
   $effect(() => {
     if (!isPanelMode) sendPanelSelect(ui.stationPanelCode);
+  });
+
+  // 브라우저 탭 제목도 로케일 따라감
+  $effect(() => {
+    document.title = t('지진 모니터');
   });
 
   const processedHistoryList = $derived(groupHistoryList(p2pQuakeService.p2pHistoryList, ui.groupUnknown));
@@ -171,16 +177,16 @@
   {#if ui.isCleanMode}
     <button
       onclick={() => app.exitCleanMode()}
-      title="전체 지도 모드 종료"
+      title={t('전체 지도 모드 종료')}
       class="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2 rounded-lg border border-zinc-700 bg-zinc-900 text-zinc-300 text-xs font-bold hover:text-white hover:bg-zinc-800 cursor-pointer animate-overlay-in">
-      전체 지도 보기 중 — 클릭 또는 ESC로 복귀
+      {t('전체 지도 보기 중 — 클릭 또는 ESC로 복귀')}
     </button>
   {:else if ui.hasDetectedGrids}
     <button
       onclick={() => app.focusOnDetectedGrid()}
-      title="감지된 흔들림 격자로 이동"
+      title={t('감지된 흔들림 격자로 이동')}
       class="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 px-4 py-2 rounded-lg font-bold text-xs sm:text-sm cursor-pointer transition-colors bg-emerald-600 border border-emerald-500 text-white hover:bg-emerald-500 animate-pulse animate-overlay-in">
-      흔들림 감지 — 격자로 이동
+      {t('흔들림 감지 — 격자로 이동')}
     </button>
   {/if}
 </div>

@@ -22,6 +22,15 @@ export interface DetectionLogEntry {
   top?: DetectionTopStation | null; // 최대 진도 관측소 (웹후크 리포트용)
 }
 
+/** 감지 진행 중 라이브 상태 (웹후크 시작 리포트용) */
+export interface LiveEpisode {
+  start: number;
+  count: number;
+  maxJindo: number;
+  center: [number, number] | null;
+  top: DetectionTopStation | null;
+}
+
 const KEY = KEYS.detectionLog;
 const MAX_ENTRIES = 50;
 
@@ -29,6 +38,38 @@ let episode = newEpisode();
 
 function newEpisode() {
   return { start: Infinity, end: 0, maxJindo: -99, sumLon: 0, sumLat: 0, count: 0, top: null as DetectionTopStation | null };
+}
+
+/** 현재 진행 중인 감지의 라이브 집계 — 에피소드 시작 즉시 웹후크를 보내기 위한 스냅샷. 감지 없으면 null */
+export function collectLiveEpisode(stationsState: Map<string, any>): LiveEpisode | null {
+  let count = 0;
+  let maxJindo = -99;
+  let start = Infinity;
+  let sumLon = 0;
+  let sumLat = 0;
+  let top: DetectionTopStation | null = null;
+  for (const stn of stationsState.values()) {
+    if (!stn.event) continue;
+    count++;
+    const evMax = stn.event.maxJindo ?? stn.jindo ?? -99;
+    maxJindo = Math.max(maxJindo, evMax);
+    start = Math.min(start, stn.event.startTime ?? Infinity);
+    if (stn.lonlat) {
+      sumLon += stn.lonlat[0];
+      sumLat += stn.lonlat[1];
+    }
+    if (stn.name && (!top || evMax > top.jindo)) {
+      top = { name: stn.name, region: stn.region ?? '', jindo: evMax };
+    }
+  }
+  if (count === 0) return null;
+  return {
+    start: start === Infinity ? Date.now() : start,
+    count,
+    maxJindo,
+    center: [sumLon / count, sumLat / count],
+    top
+  };
 }
 
 /** 만료되는 관측소의 이벤트 정보 누적 (event가 지워지기 직전에 호출) */

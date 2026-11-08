@@ -1,5 +1,6 @@
 import type { EEWMessage } from '../models';
 import { TIMING, SIM } from '../config';
+import { t } from '../i18n/i18n';
 
 export function parseJSTTime(str: any): number {
   if (!str) return 0;
@@ -93,11 +94,11 @@ export function buildMockEew(): EEWMessage {
     `${pad(nowJST.getUTCHours())}:${pad(nowJST.getUTCMinutes())}:${pad(nowJST.getUTCSeconds())}`;
 
   return {
-    Title: '緊急地震速報 (모의 테스트)',
+    Title: t('緊急地震速報 (모의 테스트)'),
     Issue: { Status: 'テスト' },
     AnnouncedTime: originTime,
     OriginTime: originTime,
-    Hypocenter: '도쿄 근해 (P/S파 모의 시뮬레이션)',
+    Hypocenter: t('도쿄 근해 (P/S파 모의 시뮬레이션)'),
     Latitude: SIM.lat,
     Longitude: SIM.lon,
     Magunitude: 6.5,
@@ -112,7 +113,7 @@ export function buildMockEew(): EEWMessage {
       { name: '東京都２３区', scaleFrom: 40 },
       { name: '東京都多摩東部', scaleFrom: 30 },
       { name: '千葉県北西部', scaleFrom: 45 },
-      { name: '神奈川県東部', scaleFrom: 46 },
+      { name: '神奈川県東部', scaleFrom: 50 },
       { name: '埼玉県南部', scaleFrom: 30 },
       { name: '茨城県南部', scaleFrom: 30 }
     ]

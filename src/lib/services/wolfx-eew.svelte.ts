@@ -1,6 +1,7 @@
 import type { EEWMessage } from '../models';
 import { connectWithRetry, type WsRetryHandle } from './ws-connect';
 import { TIMING, NET } from '../config';
+import { t } from '../i18n/i18n';
 
 export class WolfxEewService {
   eewData = $state<EEWMessage | null>(null);
@@ -21,7 +22,7 @@ export class WolfxEewService {
     if (!(data && (data.type === 'jma_eew' || data.Title || data.Hypocenter || data.CodeType === 'EEW'))) return;
     const mappedEew: EEWMessage = {
       Title: data.Title || (data.isWarn ? '緊急地震速報 (警報)' : '緊急地震速報 (予報)'),
-      Issue: { Status: data.Issue?.Status || (data.isFinal ? '最終報' : (data.Serial ? `第${data.Serial}報` : '속보')) },
+      Issue: { Status: data.Issue?.Status || (data.isFinal ? '最終報' : (data.Serial ? `第${data.Serial}報` : t('속보'))) },
       OriginTime: data.OriginTime || data.AnnouncedTime,
       ReportTime: data.ReportTime || new Date().toISOString(),
       ReportNum: data.Serial || 1,

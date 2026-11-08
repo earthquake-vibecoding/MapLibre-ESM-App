@@ -5,6 +5,7 @@
   import { loadFavorites, saveFavorites, FAVORITES_KEY } from '../quake/station-favorites';
   import { VIEW, DETECT, TIMING } from '../config';
   import Sparkline from './Sparkline.svelte';
+  import { t } from '../i18n/i18n';
 
   interface Props {
     /** overlay: 메인 지도 위 플로팅 / window: 외부 미니 창 전체 (프레임리스 드래그) */
@@ -103,12 +104,12 @@
 >
   <!-- 헤더 (window 모드: 제목표시줄 대용 드래그 영역) -->
   <div class="flex items-center gap-1.5 px-3 py-2 border-b border-zinc-200 dark:border-zinc-700" style={isWindow ? '-webkit-app-region: drag' : ''}>
-    <span class="font-bold text-sm truncate flex-1">📍 {stn?.region || ''} {stn?.name || (isWindow ? '관측소 선택…' : '관측소')}</span>
+    <span class="font-bold text-sm truncate flex-1">📍 {stn?.region || ''} {stn?.name || (isWindow ? t('관측소 선택…') : t('관측소'))}</span>
     <button
       type="button"
       onclick={toggleFav}
       style={isWindow ? '-webkit-app-region: no-drag' : ''}
-      aria-label={isFav ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+      aria-label={isFav ? t('즐겨찾기 해제') : t('즐겨찾기 추가')}
       class="p-1 rounded-md cursor-pointer transition-colors {isFav ? 'text-amber-400 hover:text-amber-300' : 'text-zinc-300 hover:text-amber-400 dark:text-zinc-600 dark:hover:text-amber-400'}">
       {'★'}
     </button>
@@ -116,20 +117,20 @@
       type="button"
       onclick={close}
       style={isWindow ? '-webkit-app-region: no-drag' : ''}
-      aria-label="관측소 패널 닫기"
+      aria-label={t('관측소 패널 닫기')}
       class="p-1 rounded-md text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer text-sm font-bold w-6">✕</button>
   </div>
 
   <!-- 현재 상태 -->
   <div class="px-3 py-2.5 flex items-center gap-2 border-b border-zinc-200 dark:border-zinc-700">
     <span class="rounded px-2 py-1 text-xs font-black text-white" style="background-color: {badgeColor}">
-      진도 {snap?.jindo != null && snap.jindo >= DETECT.displayJindoMin ? getJindoString(jindoToScale(snap.jindo)) : '0'}
+      {t('진도')} {snap?.jindo != null && snap.jindo >= DETECT.displayJindoMin ? getJindoString(jindoToScale(snap.jindo)) : '0'}
     </span>
     {#if gal !== null}
       <span class="text-[11px] text-zinc-500 dark:text-zinc-400">≈ {gal} gal</span>
     {/if}
     <span class="ml-auto flex items-baseline gap-1">
-      <span class="text-[10px] text-zinc-400">상승률(10s)</span>
+      <span class="text-[10px] text-zinc-400">{t('상승률(10s)')}</span>
       <strong class="font-mono text-sm {snap && snap.deltaSum > 1.2 ? 'text-red-500' : 'text-zinc-600 dark:text-zinc-300'}">
         {snap ? (snap.deltaSum >= 0 ? '+' : '') + snap.deltaSum.toFixed(2) : '—'}
       </strong>
@@ -139,18 +140,18 @@
   {#if snap?.event}
     <div class="px-3 py-1.5 text-[11px] font-bold text-red-500 bg-red-50 dark:bg-red-950/40 border-b border-zinc-200 dark:border-zinc-700 flex items-center gap-1.5">
       <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
-      감지중 {Math.max(0, Math.floor((Date.now() - snap.event.startTime) / 1000))}s
+      {t('감지중 {n}s', { n: Math.max(0, Math.floor((Date.now() - snap.event.startTime) / 1000)) })}
     </div>
   {/if}
 
   <!-- 스파크라인 -->
   <div class="px-3 py-2 border-b border-zinc-200 dark:border-zinc-700">
-    <div class="text-[10px] font-bold text-zinc-400 mb-1">최근 60초 계측진도</div>
+    <div class="text-[10px] font-bold text-zinc-400 mb-1">{t('최근 60초 계측진도')}</div>
     {#if snap?.hist}
       <Sparkline hist={snap.hist} color={badgeColor} />
     {:else}
       <div class="h-20 flex items-center justify-center text-[11px] text-zinc-400 bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-100 dark:border-zinc-800 rounded">
-        {snap ? '데이터 수집 중…' : '관측소 데이터 없음'}
+        {snap ? t('데이터 수집 중…') : t('관측소 데이터 없음')}
       </div>
     {/if}
   </div>
@@ -175,7 +176,7 @@
   <div class="px-3 py-2">
     <input
       bind:value={query}
-      placeholder="관측소 검색 (이름/지역)"
+      placeholder={t('관측소 검색 (이름/지역)')}
       class="w-full px-2.5 py-1.5 text-xs rounded-md border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 text-zinc-800 dark:text-zinc-100" />
     {#if query.trim()}
       <ul class="mt-1.5 max-h-36 overflow-y-auto custom-scrollbar rounded-md border border-zinc-200 dark:border-zinc-700 divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -190,7 +191,7 @@
             </button>
           </li>
         {:else}
-          <li class="px-2.5 py-2 text-[11px] text-zinc-400">검색 결과 없음</li>
+          <li class="px-2.5 py-2 text-[11px] text-zinc-400">{t('검색 결과 없음')}</li>
         {/each}
       </ul>
     {/if}

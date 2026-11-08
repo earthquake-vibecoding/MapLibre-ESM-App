@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Tab } from '../state.svelte';
+  import { t } from '../i18n/i18n';
 
   interface Props {
     activeTab: Tab;
@@ -34,25 +35,25 @@
   <div class="flex items-center gap-2 min-w-0 shrink-0">
     <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
     <span class="font-mono text-xs sm:text-sm tabular-nums text-zinc-500 dark:text-zinc-400 truncate hidden sm:inline">
-      {latestTime || '시간 로딩 중...'}
+      {latestTime || t('시간 로딩 중...')}
     </span>
   </div>
 
   <!-- 중앙: 세그먼트 탭 -->
   <div class="flex-1 flex items-center justify-center min-w-0">
     <div class="flex items-stretch rounded-md border border-zinc-200 divide-x divide-zinc-200 overflow-hidden dark:border-zinc-700 dark:divide-zinc-700">
-      {#each tabDefs as t (t.id)}
+      {#each tabDefs as td (td.id)}
         <button
-          onclick={() => onTabChange(t.id)}
-          class={seg + (activeTab === t.id ? segOn : segIdle)}>
-          <span class={'w-1.5 h-1.5 rounded-full shrink-0 ' + t.dot}></span>
-          <span>{t.label}</span>
+          onclick={() => onTabChange(td.id)}
+          class={seg + (activeTab === td.id ? segOn : segIdle)}>
+          <span class={'w-1.5 h-1.5 rounded-full shrink-0 ' + td.dot}></span>
+          <span>{t(td.label)}</span>
         </button>
       {/each}
       <button
         onclick={onToggleHistory}
         class={seg + (historyOpen ? segOn : segIdle)}>
-        <span>이력 ({historyCount})</span>
+        <span>{t('이력 ({n})', { n: historyCount })}</span>
       </button>
     </div>
   </div>
@@ -61,10 +62,10 @@
   <div class="flex items-center gap-0.5 shrink-0">
     <button
       onclick={onToggleNotification}
-      aria-label="브라우저 알림 설정"
+      aria-label={t('브라우저 알림 설정')}
       title={notificationPermission === 'granted'
-        ? (notificationEnabled ? '브라우저 알림 ON (클릭 시 OFF)' : '브라우저 알림 OFF (클릭 시 ON)')
-        : '브라우저 알림 권한 허용 요청'}
+        ? (notificationEnabled ? t('브라우저 알림 ON (클릭 시 OFF)') : t('브라우저 알림 OFF (클릭 시 ON)'))
+        : t('브라우저 알림 권한 허용 요청')}
       class={sideBtn + (notificationPermission === 'granted' && notificationEnabled
         ? ' text-emerald-600 dark:text-emerald-400'
         : notificationPermission === 'denied'
@@ -80,8 +81,8 @@
     </button>
     <button
       onclick={onToggleDarkMode}
-      aria-label={isDarkMode ? '라이트 모드로 전환' : '다크 모드로 전환'}
-      title={isDarkMode ? '라이트 모드로 전환' : '다크 모드로 전환'}
+      aria-label={isDarkMode ? t('라이트 모드로 전환') : t('다크 모드로 전환')}
+      title={isDarkMode ? t('라이트 모드로 전환') : t('다크 모드로 전환')}
       class={sideBtn}>
       {#if isDarkMode}
         <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
