@@ -90,7 +90,7 @@
       </div>
 
       {#if showDetail}
-        <div class="p-3 rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 max-h-[42vh] overflow-y-auto custom-scrollbar flex flex-col gap-3">
+        <div class="p-3 rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 max-h-[42dvh] overflow-y-auto custom-scrollbar flex flex-col gap-3">
 
           <div class="flex items-center p-0.5 rounded-md bg-zinc-200 dark:bg-zinc-800 text-xs font-bold gap-0.5">
             <button

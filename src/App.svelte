@@ -50,7 +50,8 @@
 
 <svelte:window onkeydown={onKeydown} />
 
-<div class="relative w-full h-screen overflow-hidden bg-slate-50 text-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 transition-colors duration-300">
+<!-- h-dvh: 모바일 브라우저 주소창 뒤 영역을 100vh가 포함해 하단 고정 패널이 가려짐 — dvh로 가시 영역에 맞춤 -->
+<div class="relative w-full h-dvh overflow-hidden bg-slate-50 text-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 transition-colors duration-300">
   <div bind:this={mapEl} class="w-full h-full"></div>
 
   {#if !ui.isCleanMode}

@@ -13,7 +13,8 @@
 </script>
 
 {#if eew}
-  <div class="absolute top-14 left-1/2 -translate-x-1/2 z-30 pointer-events-auto w-[92%] max-w-md animate-overlay-in">
+  <!-- 모바일에선 MapTools 툴바 아래로 내림 (top-14면 툴바와 겹침) -->
+  <div class="absolute top-26 sm:top-14 left-1/2 -translate-x-1/2 z-30 pointer-events-auto w-[92%] max-w-md animate-overlay-in">
     <div class={'border-2 rounded-lg shadow-xl p-4 flex flex-col gap-2.5 relative ' + (eew.isWarn ? 'bg-red-950 border-red-500 text-white' : 'bg-zinc-900 border-amber-400 text-zinc-100')}>
 
       <button
