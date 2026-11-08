@@ -1,5 +1,4 @@
 import { getIntensityColor, getJindoString } from '../quake/jma-utils';
-import { ui } from '../state.svelte';
 import { t } from '../i18n/i18n';
 
 export interface StationLocation {
@@ -8,23 +7,6 @@ export interface StationLocation {
   name: string;
   pref?: string;
   scale?: number;
-}
-
-export function bindStationClicks(map: any): void {
-  // 두 레이어 모두 바인딩: quake-stations(지진 탭) + stations-hit(실시간 탭 points-layer 위 판정영역)
-  for (const layer of ['quake-stations-circle', 'stations-hit']) {
-    map.on('click', layer, (e: any) => {
-      if (!e.features || e.features.length === 0) return;
-      // 정적 Popup 대신 실시간 갱신되는 StationPanel을 연다
-      ui.stationPanelCode = e.features[0].properties.code;
-    });
-    map.on('mouseenter', layer, () => {
-      map.getCanvas().style.cursor = 'pointer';
-    });
-    map.on('mouseleave', layer, () => {
-      map.getCanvas().style.cursor = '';
-    });
-  }
 }
 
 export function createStationHighlightMarker(map: any, Marker: any, st: StationLocation): any {

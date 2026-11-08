@@ -9,7 +9,6 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { baseStyle, JAPAN_MAIN_BOUNDS, MAP_CENTER, MAP_ZOOM, geoSources } from './map-style';
 import { mapLayers } from './map-layers';
-import { bindStationClicks } from './map-marker';
 import { addTectonicLabels } from './map-tectonics'; // addHistoricalQuakes — 역사지진 일단 숨김 (2026-11-04)
 import { VIEW } from '../config';
 
@@ -49,7 +48,6 @@ export function bootMap(map: any, initialData: Map<string, any>): void {
   for (const layer of mapLayers()) {
     map.addLayer(layer);
   }
-  bindStationClicks(map);
   addEpicenterIcon(map);
   addTectonicLabels(map);
   // 역사지진 마커 — 일단 숨김. 다시 켜려면 아래 주석 해제 (데이터·코드는 map-tectonics.ts에 보존됨)

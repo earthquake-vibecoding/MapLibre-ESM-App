@@ -25,7 +25,6 @@ export async function loadStations(): Promise<StationLoadResult> {
         near: [] as any[],
         delta: [] as number[],
         deltaSum: 0,
-        history: [] as { t: number; j: number | null }[], // 최근 60프레임(≈1분) 진도 추이
         event: null as any,
         expireTime: null as number | null,
         color: 'transparent'

@@ -98,9 +98,6 @@ export class MapController {
     if (map.getLayer('points-layer')) {
       map.setLayoutProperty('points-layer', 'visibility', vis(!isEarthquakeTab));
     }
-    if (map.getLayer('stations-hit')) {
-      map.setLayoutProperty('stations-hit', 'visibility', vis(!isEarthquakeTab));
-    }
 
     // 흔들림 격자 레이어: 실시간 탭이거나 격자 존재 시 지진 예보구역 탭에서도 표시
     if (map.getLayer('detected-layer')) {

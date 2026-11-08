@@ -22,16 +22,6 @@ export const DICT_EN: Record<string, string> = {
   '아직 기록된 감지가 없습니다': 'No detections recorded yet',
   '감지 중심으로 지도 이동': 'Move map to detection center',
   '{n}개소': '{n} stations',
-  // AlertFilterSettings
-  '관심 지역만 알림': 'Alert only near favorites',
-  '최소 진도': 'Minimum intensity',
-  '{v} 이상': '{v} or stronger',
-  '반경': 'Radius',
-  '반경 {r}km': 'Radius {r}km',
-  '★ 즐겨찾은 관측소가 없으면 필터 없이 전역 알림. 지도의 관측소를 클릭해 ★을 추가해라.':
-    '★ No favorited stations — alerts run globally. Click a station on the map to add a ★.',
-  '즐겨찾은 관측소 {n}곳 반경 내 진도 충족 시에만 소리·알림. EEW는 항상 통과.':
-    'Sound/alerts only when shaking meets the threshold near {n} favorited stations. EEW always passes.',
   // SoundPreview
   '[테스트] 브라우저 알림 테스트': '[Test] Browser notification test',
   '흔들림 감지, 지진 정보 및 EEW(긴급지진속보) 수신 시 브라우저 알림이 정상적으로 전송됩니다.':
@@ -39,20 +29,6 @@ export const DICT_EN: Record<string, string> = {
   '알림음 미리듣기': 'Sound preview',
   '신규 지진 알림음 듣기': 'Play new-quake alert sound',
   '브라우저 알림 테스트': 'Test browser notification',
-  // StationPanel
-  '관측소': 'Station',
-  '관측소 선택…': 'Select a station…',
-  '즐겨찾기 해제': 'Remove favorite',
-  '즐겨찾기 추가': 'Add favorite',
-  '관측소 패널 닫기': 'Close station panel',
-  '진도': 'Intensity',
-  '상승률(10s)': 'Rise (10s)',
-  '감지중 {n}s': 'Shaking {n}s',
-  '최근 60초 계측진도': 'Instrumental intensity, last 60s',
-  '데이터 수집 중…': 'Collecting data…',
-  '관측소 데이터 없음': 'No station data',
-  '관측소 검색 (이름/지역)': 'Search stations (name/region)',
-  '검색 결과 없음': 'No results',
   // HistoryDrawer
   '지진 발생 이력': 'Earthquake history',
   '{n}건': '{n} events',
@@ -105,9 +81,6 @@ export const DICT_EN: Record<string, string> = {
   'P/S파 숨기기': 'Hide P/S waves',
   'P/S파 표시': 'Show P/S waves',
   '도구 (시뮬레이션 / 알림음 테스트)': 'Tools (simulation / sound test)',
-  '외부 관측소 패널 닫기': 'Close external station panel',
-  '외부 관측소 패널 (항상 위)': 'External station panel (always on top)',
-  '외부 관측소 패널 열기': 'Open external station panel',
   '지표': 'Surface',
   '지중': 'Borehole',
   '지역': 'Areas',
@@ -117,6 +90,8 @@ export const DICT_EN: Record<string, string> = {
   '지역별 면적 색상만': 'Area polygons only',
   '관측소 점 진도만': 'Station points only',
   '둘 다 표시': 'Show both',
+  // Legend / map-marker
+  '진도': 'Intensity',
   // Legend
   '6강': '6+',
   '6약': '6-',

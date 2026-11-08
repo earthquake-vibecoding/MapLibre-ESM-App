@@ -17,21 +17,13 @@
   import QuakeDetailPanel from './lib/components/QuakeDetailPanel.svelte';
   import HistoryDrawer from './lib/components/HistoryDrawer.svelte';
   // import OverseasPanel from './lib/components/OverseasPanel.svelte'; // 해외 탭 숨김
-  import GifViewPanel from './lib/components/GifViewPanel.svelte';
+  // import GifViewPanel from './lib/components/GifViewPanel.svelte'; // 실시간 강진모니터 숨김
   import Legend from './lib/components/Legend.svelte';
-  import StationPanel from './lib/components/StationPanel.svelte';
-  import { isPanelMode, initPanelMode, initPanelBridge, sendPanelSelect, togglePanelWindow, hasPanelBridge } from './lib/panel-mode';
   import { VIEW } from './lib/config';
   import { t } from './lib/i18n/i18n';
 
   let mapEl: HTMLElement | undefined = $state();
   let showTools = $state(false);
-  let panelOpen = $state(false);
-
-  // 선택 관측소 → 패널 창 동기화 (지도 클릭/오버레이 닫기 모두, null 포함). 패널 창 자신은 이쪽으로 보내지 않음
-  $effect(() => {
-    if (!isPanelMode) sendPanelSelect(ui.stationPanelCode);
-  });
 
   // 브라우저 탭 제목도 로케일 따라감
   $effect(() => {
@@ -51,27 +43,13 @@
   }
 
   onMount(() => {
-    if (isPanelMode) {
-      initPanelMode();
-      return;
-    }
     if (mapEl) initApp(mapEl);
-    // 메인 창: 패널 창 개폐/플라이/선택 배선 (panel-mode.ts)
-    initPanelBridge((open) => {
-      panelOpen = open;
-    });
     return () => destroyApp();
   });
 </script>
 
 <svelte:window onkeydown={onKeydown} />
 
-{#if isPanelMode}
-  <!-- 외부 미니 창: 패널만 렌더 -->
-  <div class="w-screen h-screen overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-100 relative">
-    <StationPanel mode="window" />
-  </div>
-{:else}
 <div class="relative w-full h-screen overflow-hidden bg-slate-50 text-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 transition-colors duration-300">
   <div bind:this={mapEl} class="w-full h-full"></div>
 
@@ -100,8 +78,6 @@
       onSetIntensityDisplayMode={(m) => app.setIntensityDisplayMode(m)}
       onSetRealtimeDataType={(t) => app.setRealtimeDataType(t)}
       onOpenTools={() => (showTools = true)}
-      stationPanelOpen={panelOpen}
-      onToggleStationPanel={hasPanelBridge ? togglePanelWindow : undefined}
     />
 
     {#if showLegend}
@@ -153,6 +129,7 @@
     />
   {/if}
 
+  <!-- 실시간 강진모니터 숨김
   {#if !ui.isCleanMode && ui.activeTab === 'realtime'}
     <GifViewPanel
       currentGifUrl={ui.currentGifUrl}
@@ -163,6 +140,7 @@
       onToggleGifExpanded={() => (ui.isGifExpanded = !ui.isGifExpanded)}
     />
   {/if}
+  -->
 
   <!-- 해외 탭 숨김
   {#if !ui.isCleanMode && ui.activeTab === 'overseas'}
@@ -171,10 +149,6 @@
     />
   {/if}
   -->
-
-  {#if !ui.isCleanMode && ui.stationPanelCode}
-    <StationPanel />
-  {/if}
 
   {#if ui.isCleanMode}
     <button
@@ -192,4 +166,3 @@
     </button>
   {/if}
 </div>
-{/if}

@@ -1,13 +1,12 @@
 /**
  * SSE frame 이벤트 적용 — 서버 감지 전환으로 클라이언트는 판정하지 않고 푸시를 반영만 한다.
  * (구 realtime-img: latest-time 폴링 → 프레임 fetch → 캔버스 디코드 → processFrame — 전부 서버 detect-runner.mjs로 이전)
- * 사운드/알림/관심지역 필터는 개인 설정이라 여기서 판단.
+ * 사운드/알림은 개인 설정이라 여기서 재생.
  */
 import { ui } from '../state.svelte';
 import { getJindoString, jindoToScale } from '../quake/jma-utils';
 import { soundService } from '../services/sound';
 import { notificationService } from '../services/notification.svelte';
-import { alertFilterPasses } from '../quake/alert-filter';
 import { appendDetectionEntry } from './detection-log';
 import { clearDetectedEvents } from './grid';
 import { dbg } from '../debug';
@@ -58,7 +57,6 @@ export function applyFrameEvent(e: FrameEvent, host: RealtimeHost): void {
   ui.acmapGifUrl = `/api/acmap-img?time=${e.time}&type=${ui.realtimeDataType}`;
   ui.estshindoGifUrl = `/api/estshindo-img?time=${e.time}`;
 
-  const now = Date.now();
   const evByCode = new Map(e.ev.map(v => [v.c, v]));
   const features = geojson.features;
   let visualChanged = false;
@@ -84,15 +82,11 @@ export function applyFrameEvent(e: FrameEvent, host: RealtimeHost): void {
         stn.deltaSum = stn.delta.reduce((acc: number, v: number) => acc + v, 0);
       }
       stn.jindo = jindo;
-      stn.history.push({ t: now, j: jindo });
-      if (stn.history.length > 60) stn.history.shift();
     } else if (stn.jindo !== null || stn.delta.length > 0) {
       stn.jindo = null;
       stn.delta = [];
       stn.deltaSum = 0;
       stn.rawJindoHistory = [];
-      stn.history.push({ t: now, j: null });
-      if (stn.history.length > 60) stn.history.shift();
     }
 
     // 이벤트 상태는 서버가 판정 — ev 목록과 대조해 반영/해제
@@ -116,13 +110,10 @@ export function applyFrameEvent(e: FrameEvent, host: RealtimeHost): void {
   }
 
   if (e.sound !== null) {
-    const pass = alertFilterPasses(host.stationsState);
-    dbg(`감지 jindo=${e.sound.toFixed(1)} 필터=${pass ? '통과' : '차단'}`);
-    if (pass) {
-      soundService.playShakeDetected(e.sound);
-      const scale = jindoToScale(e.sound);
-      notificationService.notifyShakingDetection(scale > 0 ? getJindoString(scale) : e.sound.toFixed(1));
-    }
+    dbg(`감지 jindo=${e.sound.toFixed(1)}`);
+    soundService.playShakeDetected(e.sound);
+    const scale = jindoToScale(e.sound);
+    notificationService.notifyShakingDetection(scale > 0 ? getJindoString(scale) : e.sound.toFixed(1));
   }
 
   if (e.center) {

@@ -95,17 +95,6 @@ export function mapLayers(): any[] {
         'circle-stroke-width': 0
       }
     },
-    // 관측소 클릭 판정영역 (점이 작아서 못 누르는 문제 — 투명 큰 원)
-    {
-      id: 'stations-hit',
-      type: 'circle',
-      source: 'points',
-      paint: {
-        'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 8, 12, 16],
-        'circle-color': 'rgba(0,0,0,0)',
-        'circle-stroke-width': 0
-      }
-    },
     // 흔들림 감지 격자 (관측소 점 위)
     {
       id: 'detected-layer',

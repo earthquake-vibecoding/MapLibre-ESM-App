@@ -1,6 +1,5 @@
 <script lang="ts">
   // import SoundPreview from './SoundPreview.svelte'; // 미리듣기 숨김
-  import AlertFilterSettings from './AlertFilterSettings.svelte';
   import LanguageSettings from './LanguageSettings.svelte';
   import { getDetectionLog, clearDetectionLog } from '../detect/detection-log';
   import { getIntensityColor, getJindoString, jindoToScale } from '../quake/jma-utils';
@@ -103,9 +102,11 @@
       {/if}
     </div>
 
+    <!-- 관심 지역만 알림 삭제
     <div class="pt-3 border-t border-zinc-200 dark:border-zinc-700">
       <AlertFilterSettings />
     </div>
+    -->
 
     <!-- 미리듣기 숨김
     <div class="pt-3 border-t border-zinc-200 dark:border-zinc-700 flex justify-center">

@@ -3,12 +3,6 @@ import { getJindoFromColor } from '../quake/jma-utils';
 import { DETECT } from '../config';
 import { updateEventMax } from './detect-levels';
 
-/** 관측소별 진도 추이 링버퍼 — StationPanel 스파크라인용 */
-function pushHistory(stn: any, t: number, j: number | null): void {
-  stn.history.push({ t, j });
-  if (stn.history.length > DETECT.historyFrames) stn.history.shift();
-}
-
 export interface DetectResult {
   updated: boolean;
   detectedUpdated: boolean;
@@ -29,7 +23,6 @@ export function processFrame(
   let newEventId: number | null = null; // 이번 프레임에서 새로 생성된 첫 이벤트 — 카메라 중심은 이 이벤트 관측소만으로 계산
   let detectedCenter: [number, number] | null = null;
   let soundJindoToPlay = -3;
-  const frameTime = Date.now(); // 히스토리 타임스탬프 — 프레임당 1회
 
   for (const feature of features) {
     const px = feature.properties.px;
@@ -69,13 +62,11 @@ export function processFrame(
             if (stn.delta.length > DETECT.deltaWindow) stn.delta.pop();
 
             stn.deltaSum = stn.delta.reduce((acc: number, val: number) => acc + val, 0);
-            pushHistory(stn, frameTime, filteredJindo);
           } else {
             stn.jindo = null;
             stn.delta = [];
             stn.deltaSum = 0;
             stn.rawJindoHistory = []; // 미디언 버퍼도 리셋 — 투명 프레임 후 옛 값이 끼지 않게
-            pushHistory(stn, frameTime, null);
           }
         }
       }

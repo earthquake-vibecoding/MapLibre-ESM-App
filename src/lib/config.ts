@@ -6,7 +6,6 @@
 /** 감지 판정 (detector.ts / noise-filter.ts) */
 export const DETECT = {
   deltaWindow: 10,         // 상승률 계산 프레임 수 (1프레임 ≈ 1초)
-  historyFrames: 60,       // 스파크라인 링버퍼 프레임 수 (≈ 1분)
   medianWindow: 3,         // 미디언 노이즈 필터 프레임 수
   riseThreshold: 1.2,      // 이벤트 판정: deltaWindow 상승률 임계
   neighborRise: 0.8,       // 이벤트 판정: 이웃 상승률 임계
@@ -26,8 +25,6 @@ export const TIMING = {
   blinkMs: 500,            // 감지 격자 점멸 주기
   waveThrottleMs: 33,      // P/S파 렌더 스로틀 (≈30fps)
   maskThrottleMs: 500,     // 예상진도 마스크 갱신 스로틀 (로컬 계산)
-  relayMs: 500,            // 메인 → 외부 패널 스냅샷 릴레이
-  panelSnapMs: 500,        // 패널 UI 스냅샷 갱신
   usgsPollMs: 300_000,     // USGS 해외지진 피드 폴링 (5분)
   p2pKeepMs: 180_000,      // 실시간 수신 지진 정보 유지 시간
   kmoniLagS: 2,            // kmoni 발행 지연 보정 (초)
@@ -55,10 +52,8 @@ export const NET = {
 export const KEYS = {
   theme: 'quake_theme',
   dataType: 'realtime_data_type',
-  alertFilter: 'alert_filter',
   detected: 'eq_detected_stations',
   notifyEnabled: 'browser_notifications_enabled',
-  favorites: 'station_favorites',
   detectionLog: 'detection_log',
   locale: 'eq_locale',
 } as const;

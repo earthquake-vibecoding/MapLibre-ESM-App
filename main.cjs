@@ -1,13 +1,11 @@
 const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain } = require('electron');
 const path = require('node:path');
-const { readFileSync, writeFileSync } = require('node:fs');
 
 // 감지 폴링/알람이 백그라운드(가려진 창)에서도 계속 돌게 — 스로틀링 전면 해제
 app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
 app.commandLine.appendSwitch('disable-features', 'IntensiveWakeUpThrottling');
 
 let mainWindow = null;
-let panelWindow = null;
 let tray = null;
 let startUrl = null;
 let isQuitting = false;
@@ -67,107 +65,6 @@ function createWindow(url) {
   });
 }
 
-// --- 외부 관측소 패널(항상 위 미니 창) — 데이터는 메인 창 릴레이로만 공급 ---
-
-const PANEL_DEFAULT = { width: 340, height: 500 };
-let panelBounds = null; // 마지막 크기/위치 — 재사용 (userData/panel-bounds.json에 저장)
-
-function panelBoundsPath() {
-  return path.join(app.getPath('userData'), 'panel-bounds.json');
-}
-
-function loadPanelBounds() {
-  try {
-    const v = JSON.parse(readFileSync(panelBoundsPath(), 'utf-8'));
-    if (v && [v.x, v.y, v.width, v.height].every((n) => typeof n === 'number')) panelBounds = v;
-  } catch {
-    panelBounds = null;
-  }
-}
-
-function savePanelBounds() {
-  if (!panelBounds) return;
-  try {
-    writeFileSync(panelBoundsPath(), JSON.stringify(panelBounds));
-  } catch {
-    // ignore
-  }
-}
-
-function trackPanelBounds() {
-  if (panelWindow && !panelWindow.isDestroyed() && !panelWindow.isMinimized()) {
-    panelBounds = panelWindow.getBounds();
-  }
-}
-
-function createPanel() {
-  panelWindow = new BrowserWindow({
-    ...(panelBounds ?? PANEL_DEFAULT),
-    minWidth: 280,
-    minHeight: 360,
-    frame: false,
-    transparent: true,
-    alwaysOnTop: true,
-    skipTaskbar: true,
-    webPreferences: {
-      backgroundThrottling: false, // 가려져도 스파크라인 갱신 유지
-      preload: path.join(__dirname, 'preload.cjs'),
-    },
-  });
-  panelWindow.setAlwaysOnTop(true, 'floating');
-  const url = startUrl + (startUrl.includes('?') ? '&' : '?') + 'panel=station';
-  panelWindow.loadURL(url);
-  // 패널 렌더러가 onSelect를 등록하기 전에 도착한 select IPC는 유실 — 로드 완료 후 최신 선택 재전송
-  panelWindow.webContents.on('did-finish-load', () => {
-    panelWindow.webContents.send('panel:select', lastPanelSelect);
-  });
-  panelWindow.on('resize', trackPanelBounds);
-  panelWindow.on('move', trackPanelBounds);
-  panelWindow.on('close', savePanelBounds);
-  panelWindow.on('closed', () => {
-    panelWindow = null;
-    broadcastPanelState(false);
-  });
-}
-
-function broadcastPanelState(open) {
-  for (const w of [mainWindow, panelWindow]) {
-    if (w && !w.isDestroyed()) w.webContents.send('panel:state', open);
-  }
-}
-
-ipcMain.handle('panel:is-open', () => !!(panelWindow && !panelWindow.isDestroyed()));
-ipcMain.on('panel:toggle', () => {
-  if (panelWindow && !panelWindow.isDestroyed()) {
-    panelWindow.close();
-    return;
-  }
-  createPanel();
-  broadcastPanelState(true);
-});
-ipcMain.on('panel:close', () => {
-  if (panelWindow && !panelWindow.isDestroyed()) panelWindow.close();
-});
-// 메인 창 → 패널: 관측소 스냅샷 릴레이
-ipcMain.on('panel:relay', (e, data) => {
-  if (panelWindow && !panelWindow.isDestroyed() && e.sender !== panelWindow.webContents) {
-    panelWindow.webContents.send('panel:data', data);
-  }
-});
-// 선택 동기화: 보낸 창 반대편으로 전달 (메인 지도 클릭 ↔ 패널 검색)
-let lastPanelSelect = null; // 패널 창 로드 완료 후 재전송용 — 리스너 등록 전에 온 select는 유실됨
-ipcMain.on('panel:select', (e, code) => {
-  lastPanelSelect = code;
-  for (const w of [mainWindow, panelWindow]) {
-    if (w && !w.isDestroyed() && w.webContents !== e.sender) w.webContents.send('panel:select', code);
-  }
-});
-// 패널에서 관측소 클릭 → 메인 창 깨워서 지도 이동
-ipcMain.on('panel:fly', (_e, lonlat) => {
-  showWindow();
-  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('panel:fly', lonlat);
-});
-
 // renderer 상태 보고 → 트레이 아이콘/툴팁 갱신
 ipcMain.on('alert-status', (_e, active) => {
   if (!tray) return;
@@ -177,7 +74,6 @@ ipcMain.on('alert-status', (_e, active) => {
 });
 
 app.whenReady().then(async () => {
-  loadPanelBounds();
   startUrl = await resolveStartUrl();
   createWindow(startUrl);
   createTray();
@@ -187,7 +83,6 @@ app.whenReady().then(async () => {
 
 app.on('before-quit', () => {
   isQuitting = true;
-  savePanelBounds();
 });
 
 app.on('window-all-closed', () => {

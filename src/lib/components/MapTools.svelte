@@ -12,12 +12,9 @@
     onSetIntensityDisplayMode: (mode: IntensityDisplayMode) => void;
     onSetRealtimeDataType: (type: RealtimeDataType) => void;
     onOpenTools: () => void;
-    /** Electron에서만 전달 — 없으면 외부 패널 버튼 숨김 */
-    stationPanelOpen?: boolean;
-    onToggleStationPanel?: () => void;
   }
 
-  let { activeTab, showWaveRings, intensityDisplayMode, realtimeDataType, onResetMapView, onToggleWaveRings, onSetIntensityDisplayMode, onSetRealtimeDataType, onOpenTools, stationPanelOpen, onToggleStationPanel }: Props = $props();
+  let { activeTab, showWaveRings, intensityDisplayMode, realtimeDataType, onResetMapView, onToggleWaveRings, onSetIntensityDisplayMode, onSetRealtimeDataType, onOpenTools }: Props = $props();
 
   const iconBtn = 'w-8 h-8 rounded-md flex items-center justify-center transition-colors cursor-pointer text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800 ';
   const opt = (active: boolean) =>
@@ -44,21 +41,14 @@
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
   </button>
 
-  {#if onToggleStationPanel}
-    <button
-      onclick={onToggleStationPanel}
-      title={stationPanelOpen ? t('외부 관측소 패널 닫기') : t('외부 관측소 패널 (항상 위)')}
-      aria-label={stationPanelOpen ? t('외부 관측소 패널 닫기') : t('외부 관측소 패널 열기')}
-      class={iconBtn + (stationPanelOpen ? 'bg-blue-600 text-white hover:bg-blue-600' : '')}>
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 9V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4"/><rect width="10" height="7" x="12" y="13" rx="1"/></svg>
-    </button>
-  {/if}
-
+  <!-- 실시간 강진모니터 숨김 — 지표/지중 전환도 함께
   {#if activeTab === 'realtime'}
     <div class={divider}></div>
     <button onclick={() => onSetRealtimeDataType('jma_s')} title={t('지표면 센서 (jma_s.gif)')} class={opt(realtimeDataType === 'jma_s') + ' self-center'}>{t('지표')}</button>
     <button onclick={() => onSetRealtimeDataType('jma_b')} title={t('지중/지하 센서 (jma_b.gif)')} class={opt(realtimeDataType === 'jma_b') + ' self-center'}>{t('지중')}</button>
   {:else if activeTab === 'earthquake'}
+  -->
+  {#if activeTab === 'earthquake'}
     <div class={divider}></div>
     <button onclick={() => onSetIntensityDisplayMode('areas')} title={t('지역별 면적 색상만')} class={opt(intensityDisplayMode === 'areas') + ' self-center'}>{t('지역')}</button>
     <button onclick={() => onSetIntensityDisplayMode('stations')} title={t('관측소 점 진도만')} class={opt(intensityDisplayMode === 'stations') + ' self-center'}>{t('관측소')}</button>

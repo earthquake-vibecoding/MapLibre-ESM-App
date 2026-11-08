@@ -34,7 +34,6 @@ export function initDetectCore(points: any[]) {
         near: [] as any[],
         delta: [] as number[],
         deltaSum: 0,
-        history: [] as { t: number; j: number | null }[],
         event: null as any,
         expireTime: null as number | null,
         color: 'transparent'
