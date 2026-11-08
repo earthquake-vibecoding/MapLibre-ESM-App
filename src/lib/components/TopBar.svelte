@@ -7,6 +7,7 @@
     historyCount: number;
     historyOpen: boolean;
     latestTime: string;
+    sseConnected: boolean;
     isDarkMode: boolean;
     notificationPermission: NotificationPermission;
     notificationEnabled: boolean;
@@ -16,7 +17,7 @@
     onToggleDarkMode: () => void;
   }
 
-  let { activeTab, historyCount, historyOpen, latestTime, isDarkMode, notificationPermission, notificationEnabled, onTabChange, onToggleHistory, onToggleNotification, onToggleDarkMode }: Props = $props();
+  let { activeTab, historyCount, historyOpen, latestTime, sseConnected, isDarkMode, notificationPermission, notificationEnabled, onTabChange, onToggleHistory, onToggleNotification, onToggleDarkMode }: Props = $props();
 
   const tabDefs: { id: Tab; label: string; dot: string }[] = [
     { id: 'earthquake', label: '지진', dot: 'bg-rose-500' },
@@ -33,7 +34,9 @@
 <div class="absolute top-0 inset-x-0 z-30 h-12 px-3 flex items-center gap-3 bg-white border-b border-zinc-200 text-zinc-800 dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-100">
   <!-- 좌측: 수신 상태 + 최신 시각 -->
   <div class="flex items-center gap-2 min-w-0 shrink-0">
-    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+    <span
+      class={'w-2 h-2 rounded-full shrink-0 ' + (sseConnected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500')}
+      title={sseConnected ? t('실시간 연결 중') : t('연결 끊김 — 재접속 대기')}></span>
     <span class="font-mono text-xs sm:text-sm tabular-nums text-zinc-500 dark:text-zinc-400 truncate hidden sm:inline">
       {latestTime || t('시간 로딩 중...')}
     </span>

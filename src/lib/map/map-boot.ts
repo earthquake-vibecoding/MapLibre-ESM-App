@@ -64,7 +64,8 @@ export function createMapControllerInstance(container: HTMLElement): { map: any;
     style: baseStyle(),
     center: MAP_CENTER,
     zoom: MAP_ZOOM,
-    attributionControl: false // UI 제거 요구사항 반영
+    attributionControl: false, // UI 제거 요구사항 반영
+    maxCanvasSize: [8192, 8192] // 기본 4096 초과 고DPI 화면에서 저해상도 폴백 경고 방지 (GPU MAX_TEXTURE_SIZE 내)
   });
 
   map.on('error', (e: any) => {

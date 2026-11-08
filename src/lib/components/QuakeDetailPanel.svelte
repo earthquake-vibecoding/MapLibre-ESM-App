@@ -34,9 +34,9 @@
 
 {#snippet shindoBadge(scale?: number)}
   {@const s = getJindoBadgeStyle(scale)}
-  <div class={'flex flex-col items-center justify-center p-3 rounded-lg border-2 min-w-[76px] shrink-0 text-center ' + s.bg + ' ' + s.text + ' ' + s.border}>
+  <div class={'flex flex-col items-center justify-center p-2 sm:p-3 rounded-lg border-2 min-w-[64px] sm:min-w-[76px] shrink-0 text-center ' + s.bg + ' ' + s.text + ' ' + s.border}>
     <span class="text-[10px] font-bold opacity-90 tracking-wider">{t('최대진도')}</span>
-    <span class="text-2xl font-black tracking-tight leading-none my-0.5">{getJindoString(scale)}</span>
+    <span class="text-xl sm:text-2xl font-black tracking-tight leading-none my-0.5">{getJindoString(scale)}</span>
     <span class="text-[9px] opacity-75 font-medium">{s.label}</span>
   </div>
 {/snippet}
@@ -44,17 +44,17 @@
 {#if quake}
   {@const item = quake}
   <div class="absolute bottom-4 left-4 z-20 w-[calc(100%-2rem)] max-w-md pointer-events-auto">
-    <div class="border border-zinc-200 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 rounded-lg shadow-lg p-4 sm:p-5 flex flex-col gap-3 relative overflow-hidden">
+    <div class="border border-zinc-200 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 rounded-lg shadow-lg p-3 sm:p-5 flex flex-col gap-2 sm:gap-3 relative overflow-hidden">
 
       <div class="flex items-start justify-between gap-3">
         <div class="flex flex-col gap-1.5 flex-1 min-w-0">
           <div class="text-xs font-mono tabular-nums text-zinc-400">{item.earthquake?.time || item.time}</div>
 
-          <h3 class="font-bold text-lg sm:text-xl truncate text-zinc-900 dark:text-zinc-100">
+          <h3 class="font-bold text-base sm:text-xl truncate text-zinc-900 dark:text-zinc-100">
             {item.earthquake?.hypocenter?.name || t('진원지 정보 없음')}
           </h3>
 
-          <div class="flex items-center gap-2 text-xs sm:text-sm font-semibold text-zinc-600 dark:text-zinc-300">
+          <div class="flex items-center gap-2 text-[11px] sm:text-sm font-semibold text-zinc-600 dark:text-zinc-300">
             <span class={chip}>
               {t('규모')} <strong class="text-rose-600 dark:text-rose-400 font-bold text-sm">M{item.earthquake?.hypocenter?.magnitude === -1 ? t('불명') : item.earthquake?.hypocenter?.magnitude}</strong>
             </span>
@@ -78,12 +78,12 @@
         <div class="flex items-center gap-2">
           <button
             onclick={() => (showDetail = !showDetail)}
-            class="px-3 py-1.5 rounded-md font-bold transition-colors cursor-pointer border border-zinc-300 bg-white hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700">
+            class="text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 rounded-md font-bold transition-colors cursor-pointer border border-zinc-300 bg-white hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700">
             {showDetail ? t('접기') : t('자세히')}
           </button>
           <button
             onclick={() => onFocusEpicenter(item)}
-            class="px-3 py-1.5 rounded-md font-bold bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer">
+            class="text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 rounded-md font-bold bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer">
             {t('진앙지 이동')}
           </button>
         </div>

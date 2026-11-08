@@ -40,6 +40,7 @@ export const ui = $state({
   acmapGifUrl: '',
   estshindoGifUrl: '',
   latestTime: '',
+  sseConnected: false, // /api/events 연결 상태 — TopBar 상태 점이 참조
   hasDetectedGrids: false,
   showWaveRings: true,
   intensityDisplayMode: 'both' as IntensityDisplayMode,

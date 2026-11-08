@@ -148,7 +148,7 @@ export function mapLayers(): any[] {
       type: 'circle',
       source: 'quake-stations',
       paint: {
-        'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 4, 8, 7, 12, 10],
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 2.5, 8, 6, 12, 10],
         'circle-color': ['get', 'color'],
         'circle-stroke-width': 1.5,
         'circle-stroke-color': '#ffffff'

@@ -6,6 +6,8 @@ export const DICT_EN: Record<string, string> = {
   '해외': 'World',
   '시간 로딩 중...': 'Loading time...',
   '이력 ({n})': 'History ({n})',
+  '실시간 연결 중': 'Live connection',
+  '연결 끊김 — 재접속 대기': 'Disconnected — reconnecting',
   '브라우저 알림 설정': 'Browser notification settings',
   '브라우저 알림 ON (클릭 시 OFF)': 'Browser notifications ON (click to turn OFF)',
   '브라우저 알림 OFF (클릭 시 ON)': 'Browser notifications OFF (click to turn ON)',

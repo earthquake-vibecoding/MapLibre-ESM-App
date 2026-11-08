@@ -60,6 +60,7 @@
       historyCount={p2pQuakeService.p2pHistoryList.length}
       historyOpen={ui.isHistoryOpen}
       latestTime={ui.latestTime}
+      sseConnected={ui.sseConnected}
       isDarkMode={ui.isDarkMode}
       notificationPermission={notificationService.permission}
       notificationEnabled={notificationService.isEnabled}
