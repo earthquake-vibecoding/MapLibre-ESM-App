@@ -146,6 +146,14 @@ app.get('/latest-time', (req, res) => {
   });
 });
 
+// 부재 복귀 되감기(catch-up) — from(14자리 JST) 이후 버퍼 프레임을 오름차순 최대 100장.
+// 절전 해제 직후 클라이언트가 이걸 25fps로 가속 재생해 오래된 프레임 → 현재 스냅을 타임랩스로 대체.
+app.get('/frame-history', (req, res) => {
+  const from = typeof req.query['from'] === 'string' ? req.query['from'] : '';
+  const frames = buffer.getFramesAfter(from, 100);
+  res.json({ frames: frames.map(f => ({ time: f.time, gif: f.buf.toString('base64') })) });
+});
+
 app.get('/acmap-img', (req, res) => {
   const time = validTime(req, res);
   if (!time) return;

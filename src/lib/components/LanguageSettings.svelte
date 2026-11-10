@@ -29,7 +29,7 @@
         onclick={() => setLocale(l.id)}
         aria-label={l.label}
         class={seg + (ui.locale === l.id
-          ? 'bg-blue-600 text-white'
+          ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
           : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800')}>
         {l.label}
       </button>

@@ -1,5 +1,6 @@
 // RGBA → PNG 인코더 (node:zlib만 사용, 의존성 0) + 감지 스냅샷 합성.
-// detect-snapshot.ts(client)와 동일 렌더: kmoni 프레임 + #ff2020 2px 사각형 스트로크.
+// 감지 스냅샷: kmoni 프레임 + #ff2020 바운딩 박스(감지 전체 영역).
+// 관측소 단위 사각형은 밀집 지역에서 서로 겹쳐 통짜 블록이 돼서 제거함 (2026-11-08).
 
 import { deflateSync } from 'node:zlib';
 
@@ -53,30 +54,41 @@ export function encodePng(rgba, width, height) {
   ]);
 }
 
-const RECT_HALF = 4;
-const STROKE = 2;
+const BOUNDS_PAD = 8;
+const BOUNDS_STROKE = 4;
 const RED = [0xff, 0x20, 0x20];
 
-/** 감지 관측소 위치에 빨간 8×8 스트로크 사각형 — detect-snapshot.ts strokeRect(lw2) 패리티 (바깥 1px 포함) */
-export function drawDetectRects(rgba, width, height, points) {
-  const rect = (cx, cy) => {
-    const x0 = Math.round(cx) - RECT_HALF, y0 = Math.round(cy) - RECT_HALF;
-    const x1 = x0 + RECT_HALF * 2, y1 = y0 + RECT_HALF * 2;
-    for (let y = y0 - 1; y <= y1 + 1; y++) {
-      for (let x = x0 - 1; x <= x1 + 1; x++) {
-        if (x < 0 || x >= width || y < 0 || y >= height) continue;
-        const edge = x - x0 < STROKE || x1 - x < STROKE || y - y0 < STROKE || y1 - y < STROKE;
-        if (!edge) continue;
-        const o = (y * width + x) * 4;
-        rgba[o] = RED[0];
-        rgba[o + 1] = RED[1];
-        rgba[o + 2] = RED[2];
-        rgba[o + 3] = 255;
-      }
+/** [x0,y0,x1,y1] 외곽선을 RED로 칠함 (바깥 1px 패리티 포함) */
+function strokeRect(rgba, width, height, x0, y0, x1, y1, stroke) {
+  for (let y = y0 - 1; y <= y1 + 1; y++) {
+    for (let x = x0 - 1; x <= x1 + 1; x++) {
+      if (x < 0 || x >= width || y < 0 || y >= height) continue;
+      const edge = x - x0 < stroke || x1 - x < stroke || y - y0 < stroke || y1 - y < stroke;
+      if (!edge) continue;
+      const o = (y * width + x) * 4;
+      rgba[o] = RED[0];
+      rgba[o + 1] = RED[1];
+      rgba[o + 2] = RED[2];
+      rgba[o + 3] = 255;
     }
-  };
+  }
+}
+
+/** 감지 전체 영역 바운딩 박스 — 감지 관측소 점들의 min/max를 감싸는 외곽선 상자 하나 */
+export function drawDetectBounds(rgba, width, height, points) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const p of points) {
     if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) continue;
-    rect(p.x, p.y);
+    minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+    minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
   }
+  if (minX === Infinity) return;
+  strokeRect(
+    rgba, width, height,
+    Math.max(0, Math.round(minX) - BOUNDS_PAD),
+    Math.max(0, Math.round(minY) - BOUNDS_PAD),
+    Math.min(width - 1, Math.round(maxX) + BOUNDS_PAD),
+    Math.min(height - 1, Math.round(maxY) + BOUNDS_PAD),
+    BOUNDS_STROKE
+  );
 }

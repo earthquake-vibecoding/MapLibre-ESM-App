@@ -9,6 +9,7 @@ import { soundService } from '../services/sound';
 import { notificationService } from '../services/notification.svelte';
 import { appendDetectionEntry } from './detection-log';
 import { clearDetectedEvents } from './grid';
+import { needsCatchUp, startCatchUp, catchUpPlaying, trackLatest } from './catch-up';
 import { dbg } from '../debug';
 import { VIEW } from '../config';
 import type { MapController } from '../map/map-controller';
@@ -41,19 +42,35 @@ function formatJst(t: string): string {
 }
 
 /** 지표(jma_s=푸시 b64)/지중(jma_b=URL on-demand) 표시 소스 */
-function currentGifSrc(e: FrameEvent): string {
+function currentGifSrc(e: Pick<FrameEvent, 'time' | 'gif'>): string {
   return ui.realtimeDataType === 'jma_s'
     ? `data:image/gif;base64,${e.gif}`
     : `/api/realtime-img?time=${e.time}&type=jma_b`;
 }
 
+/** 표시 전용 — gif/시각만. 부재 복귀 되감기(catch-up)도 이 경로로 그린다 */
+export function applyFrameDisplay(e: Pick<FrameEvent, 'time' | 'gif'>): void {
+  ui.latestTime = formatJst(e.time);
+  ui.currentGifUrl = currentGifSrc(e);
+}
+
 export function applyFrameEvent(e: FrameEvent, host: RealtimeHost): void {
   const geojson = host.geojson;
   if (!geojson) return;
+  const prev = lastFrame;
   lastFrame = e;
 
-  ui.latestTime = formatJst(e.time);
-  ui.currentGifUrl = currentGifSrc(e);
+  // 절전/부재 복귀 큰 시간차 → 스냅 대신 되감기 재생 전환. 재생 중 표시는 catch-up이 소유하고 데이터만 실시간 적용
+  if (prev && needsCatchUp(prev.time, e.time)) startCatchUp(prev.time);
+  else if (catchUpPlaying()) trackLatest(e);
+
+  applyFrameData(e, host);
+  if (!catchUpPlaying()) applyFrameDisplay(e);
+}
+
+function applyFrameData(e: FrameEvent, host: RealtimeHost): void {
+  const geojson = host.geojson;
+  if (!geojson) return;
   ui.acmapGifUrl = `/api/acmap-img?time=${e.time}&type=${ui.realtimeDataType}`;
   ui.estshindoGifUrl = `/api/estshindo-img?time=${e.time}`;
 

@@ -35,7 +35,7 @@
       <div class="flex items-center gap-2">
         <button
           onclick={onToggleGroupUnknown}
-          class={'text-[11px] font-bold px-2 py-1 rounded-md border transition-colors cursor-pointer ' + (groupUnknown ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-zinc-500 border-zinc-300 hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-400 dark:border-zinc-700 dark:hover:bg-zinc-800')}>
+          class={'text-[11px] font-bold px-2 py-1 rounded-md border transition-colors cursor-pointer ' + (groupUnknown ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 dark:border-zinc-100' : 'bg-white text-zinc-500 border-zinc-300 hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-400 dark:border-zinc-700 dark:hover:bg-zinc-800')}>
           {t('그룹화')} {groupUnknown ? 'ON' : 'OFF'}
         </button>
         <button
@@ -60,7 +60,7 @@
             tabindex="0"
             onclick={() => onSelectQuake(item)}
             onkeydown={(e) => onRowKey(e, () => onSelectQuake(item))}
-            class={'py-2.5 px-2 cursor-pointer transition-colors flex items-center justify-between gap-3 focus-visible:outline-2 focus-visible:outline-blue-600 ' + (isSelected ? 'bg-blue-50 border-l-2 border-blue-600 dark:bg-blue-950' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800')}>
+            class={'py-2.5 px-2 cursor-pointer transition-colors flex items-center justify-between gap-3 focus-visible:outline-2 focus-visible:outline-zinc-500 ' + (isSelected ? 'bg-zinc-100 border-l-2 border-zinc-900 dark:bg-zinc-800 dark:border-zinc-100' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800')}>
 
             <div class="flex flex-col min-w-0 flex-1 gap-0.5">
               <div class="flex items-center gap-2 text-[11px] font-mono text-zinc-400">
@@ -94,15 +94,15 @@
               tabindex="0"
               onclick={() => onSelectQuake(group.latestItem!)}
               onkeydown={(e) => onRowKey(e, () => onSelectQuake(group.latestItem!))}
-              class="flex items-center justify-between gap-3 cursor-pointer focus-visible:outline-2 focus-visible:outline-blue-600">
+              class="flex items-center justify-between gap-3 cursor-pointer focus-visible:outline-2 focus-visible:outline-zinc-500">
               <div class="flex flex-col min-w-0 flex-1 gap-1">
                 <div class="flex items-center gap-2 text-[11px] font-mono text-zinc-400">
-                  <span class="px-1.5 py-0.5 rounded bg-blue-600 text-white font-bold text-[10px]">{t('그룹')}</span>
+                  <span class="px-1.5 py-0.5 rounded bg-zinc-900 text-white font-bold text-[10px] dark:bg-zinc-100 dark:text-zinc-900">{t('그룹')}</span>
                   <span>{group.latestItem?.earthquake?.time || group.latestItem?.time}</span>
                 </div>
-                <div class="font-bold text-sm text-blue-700 dark:text-blue-400 flex items-center gap-2 truncate">
+                <div class="font-bold text-sm text-zinc-900 dark:text-zinc-100 flex items-center gap-2 truncate">
                   <span class="truncate">{group.latestItem?.earthquake?.hypocenter?.name || t('진원지 미상')} / M{group.latestItem?.earthquake?.hypocenter?.magnitude === -1 ? t('불명') : group.latestItem?.earthquake?.hypocenter?.magnitude}</span>
-                  <span class="text-xs px-1.5 py-0.2 rounded-full bg-blue-100 text-blue-700 font-mono shrink-0 dark:bg-blue-950 dark:text-blue-300">{t('{n}건', { n: group.items?.length })}</span>
+                  <span class="text-xs px-1.5 py-0.2 rounded-full bg-zinc-200 text-zinc-700 font-mono shrink-0 dark:bg-zinc-700 dark:text-zinc-300">{t('{n}건', { n: group.items?.length })}</span>
                 </div>
               </div>
               <div class="flex items-center gap-2 shrink-0">
@@ -118,7 +118,7 @@
             </div>
 
             {#if expanded && group.items}
-              <div class="pl-3 border-l-2 border-blue-200 dark:border-blue-900 flex flex-col gap-1 pt-1">
+              <div class="pl-3 border-l-2 border-zinc-300 dark:border-zinc-700 flex flex-col gap-1 pt-1">
                 {#each group.items as subItem, j (subItem.id || j)}
                   {@const subBStyle = getJindoBadgeStyle(subItem.earthquake?.maxScale)}
                   {@const subSelected = selectedQuake?.id === subItem.id}
@@ -127,7 +127,7 @@
                     tabindex="0"
                     onclick={() => onSelectQuake(subItem)}
                     onkeydown={(e) => onRowKey(e, () => onSelectQuake(subItem))}
-                    class={'p-2 rounded-md cursor-pointer transition-colors flex items-center justify-between gap-2 text-xs focus-visible:outline-2 focus-visible:outline-blue-600 ' + (subSelected ? 'bg-blue-50 dark:bg-blue-950' : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800 dark:hover:bg-zinc-700')}>
+                    class={'p-2 rounded-md cursor-pointer transition-colors flex items-center justify-between gap-2 text-xs focus-visible:outline-2 focus-visible:outline-zinc-500 ' + (subSelected ? 'bg-zinc-200 dark:bg-zinc-700' : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800 dark:hover:bg-zinc-700')}>
                     <div class="flex flex-col gap-0.5 min-w-0 flex-1">
                       <span class="font-mono text-[10px] text-zinc-400">{subItem.earthquake?.time || subItem.time}</span>
                       <span class="font-bold text-zinc-700 dark:text-zinc-200 truncate">
@@ -153,7 +153,7 @@
     <div class="px-2 pb-1">
       <button
         onclick={onLoadMore}
-        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-md transition-colors cursor-pointer w-full"
+        class="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 text-white text-sm font-bold rounded-md transition-colors cursor-pointer w-full"
       >
         {t('더 보기')}
       </button>

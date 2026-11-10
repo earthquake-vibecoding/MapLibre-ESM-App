@@ -94,3 +94,27 @@ describe('pollOnce', () => {
     expect(fb.getLatestJson()).toBeNull();
   });
 });
+
+describe('getFramesAfter — 부재 복귀 되감기', () => {
+  it('from 이후 jma_s 프레임 시간 오름차순, cap 초과 시 오래된 것부터 버림', () => {
+    const { fb } = makeBuffer();
+    fb.put('20261107120001', 'jma_s', GIF);
+    fb.put('20261107120002', 'jma_s', GIF);
+    fb.put('20261107120003', 'jma_s', GIF);
+    fb.put('20261107120002', 'acmap_s', GIF); // 다른 kind는 제외
+    const times = (from, cap) => fb.getFramesAfter(from, cap).map(f => f.time);
+    expect(times('20261107120000', 100)).toEqual(['20261107120001', '20261107120002', '20261107120003']);
+    expect(times('20261107120001', 100)).toEqual(['20261107120002', '20261107120003']); // from 이후만
+    expect(times('20261107120000', 2)).toEqual(['20261107120002', '20261107120003']);   // 최신 쪽 우선
+  });
+
+  it('TTL 만료 프레임 제외 + 포맷 위반 from → 빈 배열', () => {
+    const { fb, tick } = makeBuffer();
+    fb.put('20261107120001', 'jma_s', GIF);
+    tick(15 * 60_000 + 1);
+    fb.put('20261107120002', 'jma_s', GIF);
+    expect(fb.getFramesAfter('20261107120000', 100).map(f => f.time)).toEqual(['20261107120002']);
+    expect(fb.getFramesAfter('javascript:alert(1)', 100)).toEqual([]);
+    expect(fb.getFramesAfter('', 100)).toEqual([]);
+  });
+});

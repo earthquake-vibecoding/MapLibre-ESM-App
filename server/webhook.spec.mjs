@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { inflateSync } from 'node:zlib';
 import { validateDetect, buildDetectEmbed, validateEew, buildEewEmbed } from './webhook.mjs';
-import { encodePng, drawDetectRects } from './png-encode.mjs';
+import { encodePng, drawDetectBounds } from './png-encode.mjs';
 
 const detectBody = {
   start: Date.UTC(2026, 10, 7, 3, 0, 0),
@@ -56,13 +56,13 @@ describe('detect 임베드', () => {
 });
 
 describe('감지 스냅샷 합성 (png-encode)', () => {
-  it('RGBA → PNG 서명 + inflate 역검증 + 빨간 사각형 반영', () => {
+  it('RGBA → PNG 서명 + inflate 역검증 + 빨간 박스 반영', () => {
     const W = 64, H = 48;
     const rgba = new Uint8ClampedArray(W * H * 4);
     for (let i = 0; i < W * H; i++) {
       rgba[i * 4] = i % 256; rgba[i * 4 + 1] = 10; rgba[i * 4 + 2] = 20; rgba[i * 4 + 3] = 255;
     }
-    drawDetectRects(rgba, W, H, [{ x: 20, y: 20 }]);
+    drawDetectBounds(rgba, W, H, [{ x: 20, y: 20 }]);
     const png = encodePng(rgba, W, H);
     expect(png.subarray(0, 8)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
 
@@ -89,6 +89,18 @@ describe('감지 스냅샷 합성 (png-encode)', () => {
       }
     }
     expect(rectRed).toBeGreaterThan(0); // 사각형이 그려졌는지
+  });
+
+  it('drawDetectBounds — 감지 점들 전체를 감싸는 바운딩 박스 외곽선을 그린다', () => {
+    const W = 64, H = 48;
+    const rgba = new Uint8ClampedArray(W * H * 4);
+    drawDetectBounds(rgba, W, H, [{ x: 10, y: 10 }, { x: 40, y: 30 }]);
+    const red = [0xff, 0x20, 0x20];
+    const at = (x, y) => [rgba[(y * W + x) * 4], rgba[(y * W + x) * 4 + 1], rgba[(y * W + x) * 4 + 2]];
+
+    expect(at(10, 2)).toEqual(red);   // 최소 점(10,10)에서 패딩 8px 밖 — 박스 상단 외곽선
+    expect(at(10, 38)).toEqual(red);  // 최대 점(40,30) + 패딩 8px — 박스 하단 외곽선
+    expect(at(25, 20)).toEqual([0, 0, 0]); // 두 점 사이 박스 내부는 미표기
   });
 });
 

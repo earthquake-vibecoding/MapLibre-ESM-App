@@ -83,7 +83,7 @@
           </button>
           <button
             onclick={() => onFocusEpicenter(item)}
-            class="text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 rounded-md font-bold bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer">
+            class="text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 rounded-md font-bold bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 text-white transition-colors cursor-pointer">
             {t('진앙지 이동')}
           </button>
         </div>
@@ -92,15 +92,15 @@
       {#if showDetail}
         <div class="p-3 rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 max-h-[42dvh] overflow-y-auto custom-scrollbar flex flex-col gap-3">
 
-          <div class="flex items-center p-0.5 rounded-md bg-zinc-200 dark:bg-zinc-800 text-xs font-bold gap-0.5">
+          <div class="flex items-stretch rounded-md border border-zinc-200 divide-x divide-zinc-200 overflow-hidden dark:border-zinc-700 dark:divide-zinc-700 text-xs font-bold">
             <button
               onclick={() => (viewMode = 'stations')}
-              class={'flex-1 py-1.5 px-2.5 rounded transition-colors cursor-pointer ' + (viewMode === 'stations' ? 'bg-white text-blue-600 dark:bg-zinc-700 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200')}>
+              class={'flex-1 py-1.5 px-2.5 transition-colors cursor-pointer ' + (viewMode === 'stations' ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900' : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800')}>
               {t('관측소별 ({n})', { n: item.points?.length || 0 })}
             </button>
             <button
               onclick={() => (viewMode = 'areas')}
-              class={'flex-1 py-1.5 px-2.5 rounded transition-colors cursor-pointer ' + (viewMode === 'areas' ? 'bg-white text-blue-600 dark:bg-zinc-700 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200')}>
+              class={'flex-1 py-1.5 px-2.5 transition-colors cursor-pointer ' + (viewMode === 'areas' ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900' : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800')}>
               {t('지역별 ({n})', { n: areaRows.length })}
             </button>
           </div>
@@ -129,7 +129,7 @@
                         <span class="font-mono text-[10px] truncate">{st.affi || t('기상청')} · {st.lat?.toFixed(2)}°, {st.lon?.toFixed(2)}°</span>
                         <button
                           onclick={() => onFocusStation({ lat: st.lat, lon: st.lon, name: pt.addr || '', pref: pt.pref, scale: pt.scale })}
-                          class="px-2 py-0.5 rounded border border-zinc-300 bg-white hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-blue-600 dark:text-blue-400 text-[10px] font-bold cursor-pointer transition-colors shrink-0">
+                          class="px-2 py-0.5 rounded border border-zinc-300 bg-white hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 text-[10px] font-bold cursor-pointer transition-colors shrink-0">
                           {t('위치 보기')}
                         </button>
                       </div>
@@ -167,7 +167,7 @@
           {/if}
 
           <details>
-            <summary class="text-[11px] font-bold cursor-pointer text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 outline-none focus-visible:outline-2 focus-visible:outline-blue-600 rounded">{t('원본 JSON')}</summary>
+            <summary class="text-[11px] font-bold cursor-pointer text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 outline-none focus-visible:outline-2 focus-visible:outline-zinc-500 rounded">{t('원본 JSON')}</summary>
             <div class="mt-2 text-[10px] sm:text-xs font-mono overflow-x-auto p-2 bg-zinc-100 dark:bg-zinc-900 rounded border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300">
               <pre><code>{getRawData(item)}</code></pre>
             </div>

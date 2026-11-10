@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { decodeGifRgba } from './gif-decode.mjs';
-import { encodePng, drawDetectRects } from './png-encode.mjs';
+import { encodePng, drawDetectBounds } from './png-encode.mjs';
 import { getFrameBuffer, setOnFrame } from './frame-buffer.mjs';
 import { sendDetectStart, sendDetectFinal } from './webhook.mjs';
 import { getHistoryStore } from './history.mjs';
@@ -49,10 +49,10 @@ function stnColorInt(stn) {
   return (Number(m[1]) << 16) | (Number(m[2]) << 8) | Number(m[3]);
 }
 
-/** 스냅샷 PNG — kmoni 프레임 + 감지 관측소 빨간 사각형 (detect-snapshot.ts와 동일 렌더) */
+/** 스냅샷 PNG — kmoni 프레임 + 감지 전체 영역 바운딩 박스 (밀집 시 점 사각형이 통짜가 되어 제거) */
 function composeSnapshot(rgba, width, height, hits) {
   const copy = rgba.slice();
-  drawDetectRects(copy, width, height, hits);
+  drawDetectBounds(copy, width, height, hits);
   return encodePng(copy, width, height);
 }
 

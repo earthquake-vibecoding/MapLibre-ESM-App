@@ -19,6 +19,19 @@
 
   let { activeTab, historyCount, historyOpen, latestTime, sseConnected, isDarkMode, notificationPermission, notificationEnabled, onTabChange, onToggleHistory, onToggleNotification, onToggleDarkMode }: Props = $props();
 
+  // 실제 시각 시계 — 왼쪽 표시시각은 kmoni 프레임 기준(게시 지연 있음)이라 나란히 대조용
+  let now = $state('');
+  $effect(() => {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const tick = () => {
+      const d = new Date();
+      now = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  });
+
   const tabDefs: { id: Tab; label: string; dot: string }[] = [
     { id: 'earthquake', label: '지진', dot: 'bg-rose-500' },
     { id: 'realtime', label: '실시간', dot: 'bg-indigo-500' }
@@ -32,13 +45,16 @@
 </script>
 
 <div class="absolute top-0 inset-x-0 z-30 h-12 px-3 flex items-center gap-3 bg-white border-b border-zinc-200 text-zinc-800 dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-100">
-  <!-- 좌측: 수신 상태 + 최신 시각 -->
+  <!-- 좌측: 수신 상태 + 프레임 기준 시각 + 실제 시각 -->
   <div class="flex items-center gap-2 min-w-0 shrink-0">
     <span
       class={'w-2 h-2 rounded-full shrink-0 ' + (sseConnected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500')}
       title={sseConnected ? t('실시간 연결 중') : t('연결 끊김 — 재접속 대기')}></span>
-    <span class="font-mono text-xs sm:text-sm tabular-nums text-zinc-500 dark:text-zinc-400 truncate hidden sm:inline">
+    <span class="font-mono text-xs sm:text-sm tabular-nums text-zinc-500 dark:text-zinc-400 truncate hidden sm:inline" title={t('kmoni 프레임 시각')}>
       {latestTime || t('시간 로딩 중...')}
+    </span>
+    <span class="font-mono text-xs sm:text-sm tabular-nums text-zinc-400 dark:text-zinc-500 hidden sm:inline" title={t('실제 현재 시각')}>
+      · {now}
     </span>
   </div>
 

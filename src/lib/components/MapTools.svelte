@@ -17,9 +17,11 @@
   let { activeTab, showWaveRings, intensityDisplayMode, realtimeDataType, onResetMapView, onToggleWaveRings, onSetIntensityDisplayMode, onSetRealtimeDataType, onOpenTools }: Props = $props();
 
   const iconBtn = 'w-8 h-8 rounded-md flex items-center justify-center transition-colors cursor-pointer text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800 ';
+  // 활성색은 TopBar 세그먼트(segOn)와 동일 — zinc-900 / 다크 zinc-100 반전
+  const segOn = 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900';
   const opt = (active: boolean) =>
     'px-2.5 py-1.5 rounded-md text-[11px] font-bold transition-colors cursor-pointer ' + (active
-      ? 'bg-blue-600 text-white'
+      ? segOn
       : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800');
   const divider = 'w-px self-stretch bg-zinc-200 dark:bg-zinc-700 mx-0.5';
 </script>
@@ -33,7 +35,7 @@
     onclick={onToggleWaveRings}
     title={showWaveRings ? t('P/S파 숨기기') : t('P/S파 표시')}
     aria-label={showWaveRings ? t('P/S파 숨기기') : t('P/S파 표시')}
-    class={iconBtn + (showWaveRings ? 'bg-blue-600 text-white hover:bg-blue-600' : '')}>
+    class={iconBtn + (showWaveRings ? 'bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200' : '')}>
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" stroke-dasharray="2 2"/><circle cx="12" cy="12" r="4"/></svg>
   </button>
 

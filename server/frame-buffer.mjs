@@ -58,11 +58,25 @@ export function createFrameBuffer({ fetchImpl = fetch, now = Date.now } = {}) {
     return latest && now() - latest.at < LATEST_FRESH_MS ? latest.body : null;
   }
 
+  /** from(14자리 JST) 이후 jma_s 프레임 시간 오름차순 최대 cap장 — 부재 복귀 되감기(catch-up)용.
+   *  폴러가 시간순 적재하므로 삽입 순서 = 시간 순서. 14자리 고정폭이라 문자열 비교가 곧 시간 비교. */
+  function getFramesAfter(from, cap) {
+    if (!/^\d{14}$/.test(from)) return [];
+    const out = [];
+    for (const [key, v] of frames) {
+      if (!key.endsWith('|jma_s') || now() - v.at >= TTL_MS) continue;
+      const time = key.slice(0, 14);
+      if (time > from) out.push({ time, buf: v.buf });
+    }
+    return out.slice(-cap); // cap 초과 시 가장 오래된 것부터 버림 — 항상 최신 쪽까지 따라잡음
+  }
+
   return {
     put,
     get,
     pollOnce,
     getLatestJson,
+    getFramesAfter,
     getOptimalDelay: () => optimalDelay,
     getConsecutiveFailures: () => consecutiveFailures,
     getLastSuccessAt: () => lastSuccessAt,
