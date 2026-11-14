@@ -10,6 +10,8 @@ node_modules/
 .env*
 !.env.example
 *.pem
+# 배포 스크립트 — 서버 IP/유저명 포함, public 레포라 제외 (로컬 파일은 유지)
+scripts/deploy.sh
 
 # Server runtime data (감지 기록 등)
 /data/
