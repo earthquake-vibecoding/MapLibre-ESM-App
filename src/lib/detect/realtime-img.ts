@@ -145,7 +145,10 @@ function applyFrameData(e: FrameEvent, host: RealtimeHost): void {
   }
 }
 
-/** jma_s↔jma_b 전환 시 — 마지막 프레임을 재적용해 표시 소스만 갱신 */
-export function reapplyLastFrame(host: RealtimeHost): void {
-  if (lastFrame && host.geojson) applyFrameEvent(lastFrame, host);
+/** jma_s↔jma_b 전환 시 — 표시 소스만 갱신. sound/center/ended는 일회성 사이드이펙트라 재적용 금지 */
+export function reapplyLastFrame(): void {
+  if (!lastFrame) return;
+  applyFrameDisplay(lastFrame);
+  ui.acmapGifUrl = `/api/acmap-img?time=${lastFrame.time}&type=${ui.realtimeDataType}`;
+  ui.estshindoGifUrl = `/api/estshindo-img?time=${lastFrame.time}`;
 }

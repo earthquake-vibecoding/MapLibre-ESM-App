@@ -30,6 +30,16 @@
 <div class="absolute top-12 right-0 bottom-0 z-30 w-full max-w-[380px] pointer-events-auto animate-drawer-in">
   <div class="border-l border-zinc-200 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 h-full p-4 flex flex-col gap-3">
 
+    <!-- 규모·깊이 줄 — 일반 행과 그룹 하위 행 공용 -->
+    {#snippet magDepth(item: P2PQuakeItem, small = false)}
+      <div class={'flex items-center gap-2 text-zinc-500 dark:text-zinc-400 ' + (small ? 'text-[10px]' : 'text-xs')}>
+        <span>{t('규모')} <strong class="text-rose-600 dark:text-rose-400">M{item.earthquake?.hypocenter?.magnitude === -1 ? t('불명') : item.earthquake?.hypocenter?.magnitude}</strong></span>
+        <span>·</span>
+        <span>{t(item.earthquake?.hypocenter?.depth === -1 ? '깊이 불명' : (item.earthquake?.hypocenter?.depth === 0 ? '깊이 매우 얕음' : '깊이 {d}km'), { d: item.earthquake?.hypocenter?.depth })}</span>
+      </div>
+    {/snippet}
+
+
     <div class="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-zinc-700">
       <h2 class="font-bold text-sm">{t('지진 발생 이력')} <span class="text-xs font-normal text-zinc-400">({t('{n}건', { n: historyList.length })})</span></h2>
       <div class="flex items-center gap-2">
@@ -72,11 +82,7 @@
               <div class="font-bold text-sm text-zinc-800 dark:text-zinc-100 truncate">
                 {item.earthquake?.hypocenter?.name || t('진원지 미상')}
               </div>
-              <div class="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-                <span>{t('규모')} <strong class="text-rose-600 dark:text-rose-400">M{item.earthquake?.hypocenter?.magnitude === -1 ? t('불명') : item.earthquake?.hypocenter?.magnitude}</strong></span>
-                <span>·</span>
-                <span>{t(item.earthquake?.hypocenter?.depth === -1 ? '깊이 불명' : (item.earthquake?.hypocenter?.depth === 0 ? '깊이 매우 얕음' : '깊이 {d}km'), { d: item.earthquake?.hypocenter?.depth })}</span>
-              </div>
+              {@render magDepth(item)}
             </div>
 
             <div class={'px-2 py-1 rounded-md text-xs font-black shrink-0 border ' + bStyle.bg + ' ' + bStyle.text + ' ' + bStyle.border}>
@@ -138,6 +144,7 @@
                           <span class="text-[10px] text-emerald-600 dark:text-emerald-400">({t('진원정보')})</span>
                         {/if}
                       </span>
+                      {@render magDepth(subItem, true)}
                     </div>
                     <span class={'px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ' + subBStyle.bg + ' ' + subBStyle.text}>
                       {subBStyle.label}

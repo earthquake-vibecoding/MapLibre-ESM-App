@@ -1,7 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { inflateSync } from 'node:zlib';
-import { validateDetect, buildDetectEmbed, validateEew, buildEewEmbed } from './webhook.mjs';
+import { validateDetect, buildDetectEmbed, validateEew, buildEewEmbed, sendEewReport } from './webhook.mjs';
+import { requestDiscord } from './discord.mjs';
 import { encodePng, drawDetectBounds } from './png-encode.mjs';
+
+// sendEewReport의 Discord 호출 URL 검증용 — 실제 HTTP 대신 목킹
+vi.mock('./discord.mjs', () => ({
+  requestDiscord: vi.fn(async () => ({ id: '999888777' })),
+  detectPayload: vi.fn(() => '{}'),
+}));
 
 const detectBody = {
   start: Date.UTC(2026, 10, 7, 3, 0, 0),
@@ -141,5 +148,28 @@ describe('eew 임베드', () => {
 describe('EEW 병합 키 보호', () => {
   it('originTime 없으면 거부 — PATCH 병합 키라 필수', () => {
     expect(validateEew({ serial: 1, hypocenter: 'x', originTime: undefined })).toBeNull();
+  });
+});
+
+describe('EEW PATCH 병합 엔드포인트', () => {
+  beforeEach(() => {
+    requestDiscord.mockClear();
+    process.env.WEBHOOK_URL = 'https://discord.com/api/webhooks/1/tok';
+  });
+
+  it('제1보 POST → 제2보는 같은 originTime+nonce로 /messages/{id} PATCH (루트 PATCH 금지)', async () => {
+    const body = { originTime: '2026/11/14 10:00:00', hypocenter: '테스트 해역', mag: 5.1, depth: 10, maxIntensity: '3' };
+    const first = await sendEewReport({ ...body, serial: 1 });
+    expect(first?.nonce).toBeTruthy();
+    expect(requestDiscord.mock.calls[0][0]).toBe('https://discord.com/api/webhooks/1/tok');
+    expect(requestDiscord.mock.calls[0][1]).toBe('POST');
+    expect(requestDiscord.mock.calls[0][3]).toBe(true); // wait=true — 메시지 id 수령용
+
+    const second = await sendEewReport({ ...body, serial: 2, maxIntensity: '4', nonce: first.nonce });
+    expect(second).toEqual({});
+    const [url, method] = requestDiscord.mock.calls[1];
+    // 루트 PATCH는 Discord '웹후크 수정' 엔드포인트로 해석돼 메시지가 안 바뀜 — 반드시 /messages/{id}
+    expect(url).toBe('https://discord.com/api/webhooks/1/tok/messages/999888777');
+    expect(method).toBe('PATCH');
   });
 });

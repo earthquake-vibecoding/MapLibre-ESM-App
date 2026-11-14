@@ -156,7 +156,8 @@ export async function sendEewReport(body) {
   if (!v) return null;
   const embed = buildEewEmbed(v);
   if (lastEewMessage && lastEewMessage.originTime === v.originTime && body?.nonce === lastEewMessage.nonce) {
-    const ok = await requestDiscord(process.env.WEBHOOK_URL, 'PATCH', JSON.stringify({ embeds: [embed] }), false);
+    // 메시지 수정은 /messages/{id} 경로만 — 루트 PATCH는 '웹후크 수정'(이름/아바타) 엔드포인트라 임베드를 무시하고 200으로 끝남
+    const ok = await requestDiscord(`${process.env.WEBHOOK_URL}/messages/${lastEewMessage.id}`, 'PATCH', JSON.stringify({ embeds: [embed] }), false);
     if (!ok) lastEewMessage = null; // 메시지 삭제 등 실패 시 다음 보는 새 메시지로
     return ok ? {} : null;
   }

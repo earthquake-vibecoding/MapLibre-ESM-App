@@ -11,8 +11,8 @@ export interface TickerHost extends RealtimeHost {
   updateVisibility(): void;
   updateEpicenter(): void;
   updateDetectedEvents(): void;
-  /** EEW 예상진도 마스크 — 로컬 계산 전체 색칠 (500ms 스로틀, 시그니처 dedup) */
-  updateEstShindoLocal(): void;
+  /** EEW 예상진도 마스크 — kmoni EstShindoImg 프레임 샘플링(시뮬은 감쇠식), 500ms 스로틀 */
+  updateEstShindoMask(): void;
   clearEstShindoMask(): void;
 }
 
@@ -36,9 +36,9 @@ export class Ticker {
     this.animationId = null;
   }
 
-  /** 지표/지중 전환 — 마지막 프레임을 재적용해 표시 소스만 갱신 */
+  /** 지표/지중 전환 — 마지막 프레임을 표시 소스만 갱신 (사이드이펙트 재생 없음) */
   refreshTime(): void {
-    reapplyLastFrame(this.host);
+    reapplyLastFrame();
   }
 
   private loop = () => {
@@ -114,7 +114,7 @@ export class Ticker {
     // 예상진도 마스크: EEW 수신 즉시 전체 분포 색칠 — 파 링(33ms)보다 낮은 주기로 갱신
     if (eew && now - this.lastMaskRenderTime >= TIMING.maskThrottleMs) {
       this.lastMaskRenderTime = now;
-      this.host.updateEstShindoLocal();
+      this.host.updateEstShindoMask();
     }
   }
 }

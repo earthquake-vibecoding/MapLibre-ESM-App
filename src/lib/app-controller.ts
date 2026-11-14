@@ -10,6 +10,7 @@ import { applyAreaIntensity } from './quake/area-intensity';
 import { buildEpicenterFeatures, buildMockEew, isActiveEEW } from './quake/quake-utils';
 import { focusActiveGrids, focusOnEarthquake, focusOnEew, focusOnEpicenter } from './focus';
 import { buildLocalMaskFc } from './quake/est-intensity';
+import { clearMaskLayer, updateMaskLayer } from './quake/est-shindo';
 import { soundService } from './services/sound';
 import { notificationService } from './services/notification.svelte';
 import { VIEW, KEYS, SIM } from './config';
@@ -23,7 +24,6 @@ export class AppController {
   ticker: Ticker | null = null;
   lastEewKey: string | null = null;
   lastEewTime = 0;
-  private lastMaskSig = '';
 
   destroy(): void {
     this.ticker?.stop();
@@ -80,36 +80,21 @@ export class AppController {
     this.updateDetectedEvents();
   }
 
-  /** EEW 예상진도 마스크 — 감쇠식 전체 분포를 한 번에 색칠 (ticker.updateWaves에서 호출) */
-  updateEstShindoLocal(): void {
-    if (!this.mapCtl || !this.areaData) return;
+  /** EEW 예상진도 마스크 — 실제 EEW는 kmoni EstShindoImg 프레임(JMA 예측) 샘플링,
+   *  시뮬은 kmoni 프레임이 없으니 감쇠식(est-intensity)으로 색칠. ticker.updateWaves에서 호출 */
+  updateEstShindoMask(): void {
+    if (!this.mapCtl) return;
     const eew = wolfxEewService.eewData;
-    if (!eew) return;
-    const fc = buildLocalMaskFc(this.areaData.areaForecastGeoJSON.features, eew);
-    // 보고서 갱신 등으로 진도가 바뀐 때만 setData — 불필요한 재테셀레이션 방지
-    const sig = fc.features.map((f: any) => f.properties.maxJindo).join(',');
-    if (sig === this.lastMaskSig) return;
-    this.lastMaskSig = sig;
-    this.mapCtl.setSource('est-shindo-mask-area', fc);
+    if (eew?.isSimulation && this.areaData) {
+      this.mapCtl.setSource('est-shindo-mask-area', buildLocalMaskFc(this.areaData.areaForecastGeoJSON.features, eew));
+      return;
+    }
+    updateMaskLayer(this.mapCtl, ui.estshindoGifUrl);
   }
 
   clearEstShindoMask(): void {
-    this.lastMaskSig = '';
-    this.mapCtl?.setSource('est-shindo-mask-area', { type: 'FeatureCollection', features: [] });
+    if (this.mapCtl) clearMaskLayer(this.mapCtl);
   }
-
-  // [GIF 파서 비활성] kmoni EstShindoImg GIF 파싱 경로 — 로컬 계산(est-intensity.ts)으로 대체.
-  // 복구: (1) 이 블록+위 import 주석 해제 (2) realtime-img.ts의 RealtimeHost.updateEstShindoMask
-  //       멤버와 호출부 주석 해제 (3) ticker.updateWaves의 updateEstShindoLocal/clearEstShindoMask 호출 제거
-  // updateEstShindoMask(): void {
-  //   if (!this.mapCtl) return;
-  //   // 예상진도 마스크는 EEW 발표 중에만 의미가 있다 — 끝나면 소스를 비워 잔상 제거
-  //   if (!isActiveEEW(wolfxEewService.eewData)) {
-  //     clearMaskLayer(this.mapCtl);
-  //     return;
-  //   }
-  //   updateMaskLayer(this.mapCtl, ui.estshindoGifUrl);
-  // }
 
   // --- UI 액션 ---
 
@@ -128,7 +113,7 @@ export class AppController {
         focusOnEarthquake(this.mapCtl, quake, this.areaData?.areaForecastGeoJSON);
       }
     } else if (tab === 'realtime') {
-      // 마스크 갱신은 ticker.updateWaves가 담당 (GIF 시절 즉시 갱신용 호출 — 비활성)
+      this.updateEstShindoMask(); // 탭 전환 즉시 마스크 반영 (EEW 중엔 kmoni 프레임, 시뮬엔 감쇠식)
       this.mapCtl?.fitFullView(1000);
     }
   }

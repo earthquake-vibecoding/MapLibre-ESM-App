@@ -1,6 +1,15 @@
+/**
+ * EEW 예상진도 마스크 — kmoni EstShindoImg(eew) 프레임을 관측점 플롯 위치에서 샘플링해
+ * 예보구역 코드별 최대진도로 집계한다.
+ *
+ * kmoni는 예상진도를 관측점 플롯 좌표(intensity-points-v1.json의 Point.x/y)에 점으로 찍는다
+ * (2026-11-14 奄美 EEW 프레임 실측 — 폴리곤 래스터라이저는 남서 제도 인셋 배치 때문에 정합 불가).
+ * 관측점 파일엔 예보구역 코드가 없고 JMA 관측소 목록(JMAstations.json)과 명명 체계도 달라
+ * 좌표 최근접 관측소로 예보구역을 근사한다.
+ * 프레임은 EEW 발표 중에만 발행되고, 실패/빈 프레임(서버 1×1 폴백 포함)이면 null —
+ * 호출부가 setSource를 생략해 직전 마스크를 유지한다.
+ */
 import { getIntensityColor, getJindoFromColorStrict, jindoToScale } from './jma-utils';
-import { PolyProj } from '../detect/polyfit';
-import { buildPixelIndex, decodeFrameMax, GRID_H, GRID_W, type PixelProjector } from '../detect/poly-raster';
 import type { MapController } from '../map/map-controller';
 import { TIMING } from '../config';
 import { dbg } from '../debug';
@@ -8,11 +17,41 @@ import { dbg } from '../debug';
 const MASK_SOURCE = 'est-shindo-mask-area';
 const EMPTY_FC = { type: 'FeatureCollection', features: [] };
 
+export interface PlotPoint {
+  name: string;
+  x: number;      // 프레임 플롯 픽셀
+  y: number;
+  lon: number;
+  lat: number;
+  area: string | null; // 최근접 JMA 관측소의 예보구역 코드
+}
+
+/** 관측점 3×3 이웃 최대 진도 → 예보구역 코드별 집계 (순수 로직 — 스펙 대상) */
+export function sampleAreaMax(data: Uint8ClampedArray, w: number, h: number, plots: PlotPoint[]): Map<string, number> {
+  const areaMax = new Map<string, number>();
+  for (const p of plots) {
+    if (!p.area) continue;
+    let best: number | null = null;
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const x = p.x + dx;
+        const y = p.y + dy;
+        if (x < 0 || y < 0 || x >= w || y >= h) continue;
+        const o = (y * w + x) * 4;
+        if (data[o + 3] < 128) continue;
+        const j = getJindoFromColorStrict(data[o], data[o + 1], data[o + 2]);
+        if (j !== null && (best === null || j > best)) best = j;
+      }
+    }
+    if (best === null) continue;
+    if (best > (areaMax.get(p.area) ?? -3)) areaMax.set(p.area, best);
+  }
+  return areaMax;
+}
+
 class EstShindoMask {
   private areaForecastGeoJSON: any = null;
-  private proj = new PolyProj();
-  /** 픽셀→피처 인덱스 캐시 (이미지 크기별) */
-  private indexCache = new Map<string, Int16Array>();
+  private plots: PlotPoint[] = [];
   private isInitialized = false;
 
   private offscreenCanvas: HTMLCanvasElement | null = null;
@@ -22,22 +61,44 @@ class EstShindoMask {
     if (this.isInitialized) return;
 
     try {
-      // 1. 예보구역 GeoJSON & 진도 지점 데이터
-      const [geoRes, pointsRes] = await Promise.all([
+      // 1. 예보구역 GeoJSON + 관측점 플롯 + JMA 관측소(예보구역 근사용)
+      const [geoRes, pointsRes, stationRes] = await Promise.all([
         fetch('/area_forecast.json'),
-        fetch('/intensity-points-v1.json')
+        fetch('/intensity-points-v1.json'),
+        fetch('/JMAstations.json')
       ]);
       this.areaForecastGeoJSON = await geoRes.json();
-      const pointsData = await pointsRes.json();
+      const rawPlots: any[] = await pointsRes.json();
+      const stations: any[] = await stationRes.json();
 
-      // 2. 2D 다항 회귀 모델 학습 후 기본 그리드(352×400) 픽셀 인덱스 구축
-      this.proj.train(pointsData);
-      this.indexCache.set(
-        `${GRID_W}x${GRID_H}`,
-        buildPixelIndex(this.areaForecastGeoJSON.features, this.proj, GRID_W, GRID_H)
-      );
+      const plots: PlotPoint[] = rawPlots
+        .filter((p: any) => p.Point && p.Location && typeof p.Point.x === 'number')
+        .map((p: any) => ({
+          name: p.Name, x: p.Point.x, y: p.Point.y,
+          lon: p.Location.longitude, lat: p.Location.latitude, area: null
+        }));
 
-      // 3. GIF 픽셀 파싱용 오프스크린 캔버스 (크기는 프레임마다 실측값으로)
+      // 2. 관측점 → 최근접 JMA 관측소의 예보구역 코드 (프레임 내 좌표계와 무관한 lon/lat 매칭)
+      const stLon: number[] = [];
+      const stLat: number[] = [];
+      const stArea: string[] = [];
+      for (const st of stations) {
+        if (!st.area?.code || !st.lat || !st.lon) continue;
+        stLon.push(parseFloat(st.lon));
+        stLat.push(parseFloat(st.lat));
+        stArea.push(st.area.code);
+      }
+      for (const p of plots) {
+        let best = Infinity;
+        const cosLat = Math.cos((p.lat * Math.PI) / 180);
+        for (let i = 0; i < stLon.length; i++) {
+          const d = (stLat[i] - p.lat) ** 2 + ((stLon[i] - p.lon) * cosLat) ** 2;
+          if (d < best) { best = d; p.area = stArea[i]; }
+        }
+      }
+      this.plots = plots;
+
+      // 3. GIF 픽셀 파싱용 오프스크린 캔버스
       if (typeof document !== 'undefined') {
         this.offscreenCanvas = document.createElement('canvas');
         this.offscreenCtx = this.offscreenCanvas.getContext('2d', { willReadFrequently: true });
@@ -49,28 +110,11 @@ class EstShindoMask {
     }
   }
 
-  /** 이미지 크기에 맞는 픽셀 인덱스 (352×400 외 크기는 기본 투영을 스케일해서 재라스터화) */
-  private getIndex(w: number, h: number): Int16Array {
-    const key = `${w}x${h}`;
-    let idx = this.indexCache.get(key);
-    if (idx) return idx;
-
-    const scaled: PixelProjector = {
-      toPixelF: (lon, lat) => {
-        const p = this.proj.toPixelF(lon, lat);
-        return p ? { x: (p.x * w) / GRID_W, y: (p.y * h) / GRID_H } : null;
-      }
-    };
-    idx = buildPixelIndex(this.areaForecastGeoJSON.features, scaled, w, h);
-    this.indexCache.set(key, idx);
-    return idx;
-  }
-
   /**
-   * GIF → 피처 인덱스별 최대 진도. 실패/빈 프레임(서버 1×1 fallback 포함)이면
-   * null — 호출부가 setSource를 생략해 직전 마스크를 유지한다.
+   * GIF → 관측점별 최대 진도 → 예보구역 코드별 집계.
+   * 3×3 이웃 최대 — 프레임 점이 플롯 좌표에서 1~2px 어긋난 것도 흡수한다.
    */
-  private processEstShindoGif(gifUrl: string): Promise<Map<number, number> | null> {
+  private processEstShindoGif(gifUrl: string): Promise<Map<string, number> | null> {
     return new Promise((resolve) => {
       if (!this.isInitialized || !this.offscreenCtx || !gifUrl) {
         resolve(null);
@@ -98,9 +142,7 @@ class EstShindoMask {
           this.offscreenCanvas!.width = w;
           this.offscreenCanvas!.height = h;
           ctx.drawImage(img, 0, 0);
-          const data = ctx.getImageData(0, 0, w, h).data;
-
-          resolve(decodeFrameMax(this.getIndex(w, h), data, w, h, getJindoFromColorStrict));
+          resolve(sampleAreaMax(ctx.getImageData(0, 0, w, h).data, w, h, this.plots));
         } catch (err) {
           console.error('Error parsing EstShindo GIF pixels:', err);
           resolve(null);
@@ -120,18 +162,14 @@ class EstShindoMask {
     await this.init(); // 최초 호출에서 lazy 초기화 (이후 재호출은 no-op)
     if (!this.areaForecastGeoJSON) return null;
 
-    const maxMap = await this.processEstShindoGif(gifUrl);
-    if (!maxMap) return null;
+    const areaMax = await this.processEstShindoGif(gifUrl);
+    if (!areaMax) return null;
 
     let colored = 0;
-    let maxJindo = -3;
-    const features = this.areaForecastGeoJSON.features.map((feature: any, fi: number) => {
-      const mj = maxMap.get(fi) ?? -3;
+    const features = this.areaForecastGeoJSON.features.map((feature: any) => {
+      const mj = areaMax.get(feature.properties?.code) ?? -3;
       const scale = jindoToScale(mj);
-      if (scale > 0) {
-        colored++;
-        if (mj > maxJindo) maxJindo = mj;
-      }
+      if (scale > 0) colored++;
       const color = scale > 0 ? getIntensityColor(scale) : 'transparent';
       return {
         ...feature,
@@ -139,12 +177,12 @@ class EstShindoMask {
       };
     });
 
-    dbg(`마스크 갱신: 색칠 ${colored}/${features.length}, 최대 진도 ${maxJindo}`);
+    dbg(`예상진도 마스크: 색칠 ${colored}/${features.length}면적`);
     return { type: 'FeatureCollection', features };
   }
 }
 
-function maskOpacity(maxJindo: number): number {
+export function maskOpacity(maxJindo: number): number {
   if (maxJindo >= 6.5) return 0.95;       // 진도 7
   if (maxJindo >= 5.5) return 0.90;       // 진도 6약, 6강
   if (maxJindo >= 4.5) return 0.85;       // 진도 5약, 5강
