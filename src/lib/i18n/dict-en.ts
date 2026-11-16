@@ -65,16 +65,9 @@ export const DICT_EN: Record<string, string> = {
   '관측소 지점(points) 정보가 없습니다.': 'No station (points) data.',
   '지역별(areas) 진도 정보가 없습니다.': 'No area (areas) intensity data.',
   '원본 JSON': 'Raw JSON',
-  // GifViewPanel
-  '닫기 (ESC)': 'Close (ESC)',
-  '실시간 강진 모니터': 'Live strong-motion monitor',
-  '실시간 강진 모니터 확대': 'Expand live strong-motion monitor',
-  '진도 (Surface)': 'Intensity (Surface)',
-  '가속도 (PGA)': 'Acceleration (PGA)',
-  '배경 클릭 또는 ESC로 닫기 · 출처: 강진모니터 (kmoni)': 'Click background or ESC to close · Source: K-moni (kmoni)',
+  // EewBanner
   '緊急地震速報': 'Earthquake Early Warning',
   '속보': 'Initial',
-  // EewBanner
   '발생시각:': 'Origin time:',
   '규모:': 'Magnitude:',
   '최대진도:': 'Max intensity:',
@@ -106,10 +99,7 @@ export const DICT_EN: Record<string, string> = {
   '범례 접기': 'Collapse legend',
   '진도 범례 펼치기': 'Expand intensity legend',
   '진도 범례': 'Intensity legend',
-  // OverseasPanel / App
-  '해외지진': 'World quakes',
-  '진원지로 이동': 'Fly to epicenter',
-  '불러오는 중...': 'Loading...',
+  // App
   '지진 모니터': 'Quake Monitor',
   '전체 지도 모드 종료': 'Exit full-map mode',
   '전체 지도 보기 중 — 클릭 또는 ESC로 복귀': 'Full-map view — click or ESC to return',

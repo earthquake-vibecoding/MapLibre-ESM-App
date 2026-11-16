@@ -1,6 +1,6 @@
 import { KEYS } from './config';
 
-export type Tab = 'realtime' | 'earthquake' | 'overseas';
+export type Tab = 'realtime' | 'earthquake';
 export type IntensityDisplayMode = 'areas' | 'stations' | 'both';
 export type RealtimeDataType = 'jma_s' | 'jma_b';
 export type Locale = 'ko' | 'en' | 'ja';
@@ -35,9 +35,6 @@ export const ui = $state({
   locale: loadLocale(), // UI 언어 (ko/en/ja) — LanguageSettings에서 변경·저장
   isDarkMode: loadTheme(),
   isCleanMode: false,
-  isGifExpanded: false,
-  currentGifUrl: '',
-  acmapGifUrl: '',
   estshindoGifUrl: '',
   latestTime: '',
   sseConnected: false, // /api/events 연결 상태 — TopBar 상태 점이 참조

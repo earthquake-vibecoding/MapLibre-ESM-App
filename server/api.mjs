@@ -156,22 +156,10 @@ app.get('/frame-history', (req, res) => {
   res.json({ frames: frames.map(f => ({ time: f.time, gif: f.buf.toString('base64') })) });
 });
 
-app.get('/acmap-img', (req, res) => {
-  const time = validTime(req, res);
-  if (!time) return;
-  sendImage(res, time, req.query['type'] === 'jma_b' ? 'acmap_b' : 'acmap_s', false);
-});
-
 app.get('/realtime-img', (req, res) => {
   const time = validTime(req, res);
   if (!time) return;
   sendImage(res, time, req.query['type'] === 'jma_b' ? 'jma_b' : 'jma_s', false);
-});
-
-app.get('/pswave-img', (req, res) => {
-  const time = validTime(req, res);
-  if (!time) return;
-  sendImage(res, time, 'PSWaveImg', true);
 });
 
 app.get('/estshindo-img', (req, res) => {

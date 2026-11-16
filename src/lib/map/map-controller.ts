@@ -4,7 +4,7 @@ import { createStationHighlightMarker, type StationLocation } from './map-marker
 import { VIEW } from '../config';
 
 export interface VisState {
-  tab: 'realtime' | 'earthquake' | 'overseas';
+  tab: 'realtime' | 'earthquake';
   mode: 'areas' | 'stations' | 'both';
   waveRings: boolean;
   eewActive: boolean;
@@ -110,10 +110,10 @@ export class MapController {
       if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', vis(waveVis));
     }
 
-    // 진원지 마커: 지진정보 탭이거나 EEW 활성 시 항상 표시 / 해외 X는 해외 탭에서만
+    // 진원지 마커: 지진정보 탭이거나 EEW 활성 시 항상 표시
     const epiVis = isEarthquakeTab || s.eewActive;
-    for (const [id, show] of [['p2p-epicenter-layer', epiVis], ['overseas-epicenter-layer', s.tab === 'overseas']] as const) {
-      if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', vis(show));
+    if (map.getLayer('p2p-epicenter-layer')) {
+      map.setLayoutProperty('p2p-epicenter-layer', 'visibility', vis(epiVis));
     }
 
     // 관측소 개별 진도 점: 지진 정보 탭 + (stations/both 모드)

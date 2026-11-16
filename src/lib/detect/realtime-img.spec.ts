@@ -28,8 +28,6 @@ describe('reapplyLastFrame — 지표/지중 전환 재적용', () => {
     vi.clearAllMocks();
     ui.realtimeDataType = 'jma_s';
     ui.latestTime = '';
-    ui.currentGifUrl = '';
-    ui.acmapGifUrl = '';
     ui.estshindoGifUrl = '';
   });
 
@@ -47,12 +45,10 @@ describe('reapplyLastFrame — 지표/지중 전환 재적용', () => {
     expect(clearDetectedEvents).toHaveBeenCalledTimes(1);
   });
 
-  it('표시 소스는 현재 타입으로 갱신 — jma_b 전환 시 URL 재구성', () => {
+  it('표시는 현재 시각으로 갱신', () => {
     applyFrameEvent(frame({}), host());
     ui.realtimeDataType = 'jma_b';
     reapplyLastFrame();
-    expect(ui.currentGifUrl).toBe('/api/realtime-img?time=20261114120000&type=jma_b');
-    expect(ui.acmapGifUrl).toBe('/api/acmap-img?time=20261114120000&type=jma_b');
     expect(ui.latestTime).toBe('2026/11/14 12:00:00');
   });
 });

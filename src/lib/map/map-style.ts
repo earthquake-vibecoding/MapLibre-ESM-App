@@ -108,7 +108,6 @@ export function geoSources(): [string, any][] {
     ['p-wave', empty],
     ['s-wave', empty],
     ['p2p-epicenter', empty],
-    ['overseas-epicenter', empty],
     ['quake-stations', empty],
     ['est-shindo-mask-area', empty]
   ];

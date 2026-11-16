@@ -7,7 +7,6 @@ import { loadStations } from './quake/stations';
 import { fetchSeismicData } from './detect/seismic';
 import { Ticker } from './ticker';
 import { createFeedHandlers, startQuakeFeed, stopQuakeFeed } from './quake/quake-feed';
-import { usgsService } from './services/usgs.svelte';
 import { dbg } from './debug';
 import { KEYS } from './config';
 
@@ -17,7 +16,6 @@ let initSeq = 0;
 export function destroyApp(): void {
   initSeq++;
   stopQuakeFeed();
-  usgsService.stop();
   app.destroy();
 }
 
@@ -69,7 +67,6 @@ export async function initApp(container: HTMLElement): Promise<void> {
 
   startTicker();
   startQuakeFeed(createFeedHandlers(app), app);
-  // usgsService.start(); // 해외 탭 숨김 — USGS 폴링 정지
 }
 
 function onMapReady(): void {

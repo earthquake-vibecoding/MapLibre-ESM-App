@@ -5,16 +5,21 @@ node_modules/
 /dist
 /tmp
 /out-tsc
+*.tsbuildinfo
 
 # Env & secrets
 .env*
 !.env.example
 *.pem
+
 # 배포 스크립트 — 서버 IP/유저명 포함, public 레포라 제외 (로컬 파일은 유지)
 scripts/deploy.sh
 
 # Server runtime data (감지 기록 등)
 /data/
+
+# Server build artifact (detect-entry.ts esbuild 번들 — 빌드 시 생성)
+server/detect-core.mjs
 
 # Logs & coverage
 *.log
@@ -29,4 +34,3 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/settings.json
-server/detect-core.mjs

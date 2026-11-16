@@ -41,17 +41,9 @@ function formatJst(t: string): string {
   return `${t.slice(0, 4)}/${t.slice(4, 6)}/${t.slice(6, 8)} ${t.slice(8, 10)}:${t.slice(10, 12)}:${t.slice(12, 14)}`;
 }
 
-/** 지표(jma_s=푸시 b64)/지중(jma_b=URL on-demand) 표시 소스 */
-function currentGifSrc(e: Pick<FrameEvent, 'time' | 'gif'>): string {
-  return ui.realtimeDataType === 'jma_s'
-    ? `data:image/gif;base64,${e.gif}`
-    : `/api/realtime-img?time=${e.time}&type=jma_b`;
-}
-
-/** 표시 전용 — gif/시각만. 부재 복귀 되감기(catch-up)도 이 경로로 그린다 */
+/** 표시 전용 — 시각만. 부재 복귀 되감기(catch-up)도 이 경로로 그린다 */
 export function applyFrameDisplay(e: Pick<FrameEvent, 'time' | 'gif'>): void {
   ui.latestTime = formatJst(e.time);
-  ui.currentGifUrl = currentGifSrc(e);
 }
 
 export function applyFrameEvent(e: FrameEvent, host: RealtimeHost): void {
@@ -71,7 +63,6 @@ export function applyFrameEvent(e: FrameEvent, host: RealtimeHost): void {
 function applyFrameData(e: FrameEvent, host: RealtimeHost): void {
   const geojson = host.geojson;
   if (!geojson) return;
-  ui.acmapGifUrl = `/api/acmap-img?time=${e.time}&type=${ui.realtimeDataType}`;
   ui.estshindoGifUrl = `/api/estshindo-img?time=${e.time}`;
 
   const evByCode = new Map(e.ev.map(v => [v.c, v]));
@@ -149,6 +140,5 @@ function applyFrameData(e: FrameEvent, host: RealtimeHost): void {
 export function reapplyLastFrame(): void {
   if (!lastFrame) return;
   applyFrameDisplay(lastFrame);
-  ui.acmapGifUrl = `/api/acmap-img?time=${lastFrame.time}&type=${ui.realtimeDataType}`;
   ui.estshindoGifUrl = `/api/estshindo-img?time=${lastFrame.time}`;
 }

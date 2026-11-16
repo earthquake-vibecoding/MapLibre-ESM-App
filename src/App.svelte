@@ -8,7 +8,6 @@
   import { notificationService } from './lib/services/notification.svelte';
   import { groupHistoryList } from './lib/quake/history-group';
   import { isActiveEEW } from './lib/quake/quake-utils';
-  // import { focusOverseasQuake } from './lib/focus'; // 해외 탭 숨김
 
   import TopBar from './lib/components/TopBar.svelte';
   import MapTools from './lib/components/MapTools.svelte';
@@ -16,8 +15,6 @@
   import EewBanner from './lib/components/EewBanner.svelte';
   import QuakeDetailPanel from './lib/components/QuakeDetailPanel.svelte';
   import HistoryDrawer from './lib/components/HistoryDrawer.svelte';
-  // import OverseasPanel from './lib/components/OverseasPanel.svelte'; // 해외 탭 숨김
-  // import GifViewPanel from './lib/components/GifViewPanel.svelte'; // 실시간 강진모니터 숨김
   import Legend from './lib/components/Legend.svelte';
   import { VIEW } from './lib/config';
   import { t } from './lib/i18n/i18n';
@@ -131,27 +128,6 @@
       onLoadMore={() => app.loadMoreHistory()}
     />
   {/if}
-
-  <!-- 실시간 강진모니터 숨김
-  {#if !ui.isCleanMode && ui.activeTab === 'realtime'}
-    <GifViewPanel
-      currentGifUrl={ui.currentGifUrl}
-      acmapGifUrl={ui.acmapGifUrl}
-      estshindoGifUrl={ui.estshindoGifUrl}
-      isGifExpanded={ui.isGifExpanded}
-      eew={wolfxEewService.eewData}
-      onToggleGifExpanded={() => (ui.isGifExpanded = !ui.isGifExpanded)}
-    />
-  {/if}
-  -->
-
-  <!-- 해외 탭 숨김
-  {#if !ui.isCleanMode && ui.activeTab === 'overseas'}
-    <OverseasPanel
-      onFocusQuake={(q) => focusOverseasQuake(app.mapCtl, q)}
-    />
-  {/if}
-  -->
 
   {#if ui.isCleanMode}
     <button

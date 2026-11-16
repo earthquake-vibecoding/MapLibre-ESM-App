@@ -25,7 +25,6 @@ export const TIMING = {
   blinkMs: 500,            // 감지 격자 점멸 주기
   waveThrottleMs: 33,      // P/S파 렌더 스로틀 (≈30fps)
   maskThrottleMs: 500,     // 예상진도 마스크 갱신 스로틀 (로컬 계산)
-  usgsPollMs: 300_000,     // USGS 해외지진 피드 폴링 (5분)
   p2pKeepMs: 180_000,      // 실시간 수신 지진 정보 유지 시간
   kmoniLagS: 2,            // kmoni 발행 지연 보정 (초)
   shindoSoundGapMs: 1500,  // 같은 계급 진도음 재생 최소 간격
@@ -45,7 +44,6 @@ export const TIMING = {
 /** 외부 API 엔드포인트 — 외부 채널(p2p/wolfx WS)은 서버가 수신하고 SSE로 릴레이하므로 클라이언트는 동일 출처만 사용 */
 export const NET = {
   p2pHistoryBase: '/api/p2p-history?offset=', // 서버 프록시 (server/api.mjs, 30s 캐시)
-  usgsFeed: 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson',
 } as const;
 
 /** localStorage 키 — 문자열 리터럴은 여기 외 금지 */
@@ -81,7 +79,6 @@ export const VIEW = {
   clusterFly: { zoom: 6.2, speed: 1.2 },             // 감지 격자 묶음 이동
   eewFly: { zoom: 6.2, speed: 1.2 },                 // EEW 진원 이동
   epicenterFly: { zoom: 6.8, speed: 1.2, duration: 1200 }, // 진앙지 이동 버튼
-  overseasFly: { zoom: 5, duration: 1000 }, // 해외지진 행 클릭 (광역 시야)
   fitMaxZoom: 8,          // 진도 분포 fitBounds 상한
   focusStationZoom: 10.5, // 목록 관측소 포커스 줌
   focusStationMarkerMs: 7000, // 관측소 하이라이트 마커 유지 시간

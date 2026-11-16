@@ -10,7 +10,7 @@ import apiRouter from './api.mjs';
 const distDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist');
 
 // 보안 헤더 — 웹 배포 기준. Electron(http://127.0.0.1)에도 동일 적용되지만 무해.
-// connect-src: 클라이언트가 직접 붙는 외부 채널(P2PQuake HTTPS/WS, Wolfx WS, USGS 피드)
+// connect-src 'self': 클라이언트는 서버 API/SSE만 사용 (외부 피드는 전부 서버 릴레이)
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
