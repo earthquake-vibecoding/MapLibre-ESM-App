@@ -1,27 +1,43 @@
-# 일본 지진 & EEW 실시간 모니터 (eqm)
+# eqm — 일본 지진 · EEW 실시간 모니터
 
-일본 기상청(JMA) 강진모니터(kmoni) 실측 프레임 기반 지진 감지 + P2PQuake/Wolfx EEW 릴레이 모니터.
+[English](README.en.md)
 
-## 아키텍처
+기상청 강진모니터(kmoni) 실측 프레임을 1Hz로 수신·감지하고, P2PQuake/Wolfx EEW를 릴레이하는 모니터.
+서버가 감지·기록·푸시를 전부 수행하고, 화면은 SSE 스트림 하나를 그리기만 한다.
 
-- **렌더러** (`src/`): Svelte 5 + Vite 7 + MapLibre GL + Tailwind v4. 서버의 SSE(`/api/events`)를 구독해 그리는 순수 클라이언트 — 감지 판정 없음.
-- **서버** (`server/`): Node + express 단일 서비스. kmoni 프레임 1Hz 폴러 + 프레임 버퍼(`frame-buffer.mjs`), 감지 파이프라인(`detect-entry.ts` → esbuild 번들 `detect-core.mjs`), Discord 웹후크, wolfx/p2p WS 피드 릴레이 전부 담당.
-- **감지음**: kmoni 실측 계측진도 기반 (shi0 비프 + 계급 상승 시 shiN 샘플).
+## 동작 개요
+
+- **감지** — 서버가 kmoni 프레임을 초당 1장 수신(프레임 버퍼 캐시) → 픽셀 색을 계측진도로 환산 → 관측소별 상승률 판정. 판정 로직은 클라/서버 공용 코드를 esbuild 번들로 공유.
+- **표시** — MapLibre 지도 위 예보구역 색칠, 관측소 점, P/S파 링, EEW 예상진도 마스크.
+- **알림** — 감지 비프 + 계급 상승음(kmoni 실측 기반 샘플), EEW 음성, Discord 감지 리포트(시작 POST → 종료 PATCH 2단계), 브라우저 알림.
+- **부재 복귀** — 절전/탭 이탈 후 복귀하면 버퍼의 프레임을 25fps 타임랩스로 되감기 재생.
+- **기타** — 3개국어(ko/en/ja), 다크 모드, Electron 데스크톱(트레이 상주) 지원.
+
+## 구조
+
+```
+src/      Svelte 5 렌더러 — SSE(/api/events) 구독 + 지도/음성/알림 (감지 판정 없음)
+server/   Node + express — kmoni 폴러·감지·웹후크·피드 릴레이·API 전부
+```
 
 ## 실행
 
+[pnpm](https://pnpm.io) 전용 (npm 사용 금지 — lockfile이 `pnpm-lock.yaml` 하나).
+
 ```bash
-pnpm install        # pnpm 전용 — npm 사용 금지 (lockfile이 pnpm-lock.yaml 하나)
-pnpm dev            # 개발 서버 http://localhost:3000
-pnpm build && pnpm start   # 프로덕션 (node server/index.mjs, PORT 기본 3000)
-pnpm check          # svelte-check
-pnpm test           # vitest
+pnpm install
+pnpm dev                  # 개발 서버 — http://localhost:3000
+pnpm build && pnpm start  # 프로덕션 (node server/index.mjs)
 ```
+
+| 명령 | 설명 |
+|---|---|
+| `pnpm dev` | 개발 서버 |
+| `pnpm build` | 프로덕션 빌드 (감지 번들 포함) |
+| `pnpm start` | 서버 실행 (`PORT` 기본 3000) |
+| `pnpm check` | svelte-check |
+| `pnpm test` | vitest |
 
 ## 환경 변수
 
-`.env.example` 참고 — `WEBHOOK_URL`(Discord 감지 리포트)만 있으면 동작. 미설정 시 리포트만 비활성.
-
-## 배포
-
-`scripts/deploy.sh`는 로컬 전용(서버 IP 포함, git 추적 안 함) — 원자적 교체로 오라클 오사카 서버의 systemd 서비스 `eqm`을 재시작.
+`.env.example` 참고 — `WEBHOOK_URL`(Discord 감지 리포트) 하나뿐. 미설정 시 리포트만 비활성.
