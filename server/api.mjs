@@ -68,7 +68,8 @@ function validTime(req, res) {
   return time;
 }
 
-/** 버퍼 hit → 즉시 서빙, miss → on-demand fetch 후 버퍼 적재. 폴러가 받지 않는 kind(acmap/eew)도 이 경로로 캐시됨 */
+/** 버퍼 hit → 즉시 서빙, miss → on-demand fetch. 적재는 on-demand 전용 캐시(putOnDemand)로만 —
+ *  폴러가 선수신한 감지 소스(jma_s) 프레임을 외부 요청으로 밀어낼 수 없게 분리 */
 async function sendImage(res, time, kind, fallback) {
   const hit = buffer.get(time, kind);
   if (hit) {
@@ -81,7 +82,8 @@ async function sendImage(res, time, kind, fallback) {
     const response = await fetchWithTimeout(kmoniImgUrl(time, kind));
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const buf = Buffer.from(await response.arrayBuffer());
-    buffer.put(time, kind, buf);
+    // 폴러 경로와 동일 기준: GIF 매직 없는 응답(리다이렉트/에러페이지)은 캐시하지 않음
+    if (buf.subarray(0, 4).toString('ascii') === 'GIF8') buffer.putOnDemand(time, kind, buf);
     res.setHeader('Content-Type', 'image/gif');
     res.setHeader('X-Frame-Source', 'fetch');
     res.send(buf);

@@ -7,35 +7,54 @@ const TTL_MS = 15 * 60_000; // kmoni 프레임은 불변 — TTL은 메모리 �
 const MAX_ENTRIES = 500; // 프레임 ~60KB × 500 ≈ 30MB 상한
 const POLL_INTERVAL_MS = 1000;
 const LATEST_FRESH_MS = 60_000; // latest.json 캐시 신선도 (kmoni 정지 시 마지막 실측값 유지)
+const OD_TTL_MS = 5 * 60_000;
+const OD_MAX = 120; // on-demand 캐시 상한 — 외부 요청이 폴러 프레임을 밀어내지 못하게 별도 Map 분리
 
 export function createFrameBuffer({ fetchImpl = fetch, now = Date.now } = {}) {
-  const frames = new Map(); // `${time}|${kind}` → { buf, type, at }
+  const frames = new Map(); // `${time}|${kind}` → { buf, type, at } — 폴러 전용(감지 소스)
+  const onDemand = new Map(); // 요청 경로 온디맨드 캐시 — 폴러 버퍼와 절대 섞이지 않음
   let latest = null; // { body, at }
   let optimalDelay = 2000;
   let lastSuccessAt = 0;
   let consecutiveFailures = 0;
 
-  function evict(t) {
-    for (const [k, v] of frames) {
-      if (t - v.at >= TTL_MS) frames.delete(k);
+  function evict(store, ttl, max, t) {
+    for (const [k, v] of store) {
+      if (t - v.at >= ttl) store.delete(k);
     }
-    while (frames.size >= MAX_ENTRIES) frames.delete(frames.keys().next().value);
+    while (store.size >= max) store.delete(store.keys().next().value);
+  }
+
+  function evictFrames(t) {
+    evict(frames, TTL_MS, MAX_ENTRIES, t);
   }
 
   function put(time, kind, buf, type = 'image/gif') {
     if (!time || !kind || !Buffer.isBuffer(buf) || buf.length === 0) return;
-    evict(now());
+    evictFrames(now());
     frames.set(`${time}|${kind}`, { buf, type, at: now() });
   }
 
+  /** 요청 경로(on-demand fetch) 전용 — 폴러가 관리하는 감지 프레임 버퍼를 건드리지 않는다 */
+  function putOnDemand(time, kind, buf, type = 'image/gif') {
+    if (!time || !kind || !Buffer.isBuffer(buf) || buf.length === 0) return;
+    evict(onDemand, OD_TTL_MS, OD_MAX, now());
+    onDemand.set(`${time}|${kind}`, { buf, type, at: now() });
+  }
+
+  /** 폴러 버퍼 우선, 없으면 on-demand 캐시 폴백 */
   function get(time, kind) {
-    const hit = frames.get(`${time}|${kind}`);
-    if (!hit) return null;
-    if (now() - hit.at >= TTL_MS) {
-      frames.delete(`${time}|${kind}`);
+    const key = `${time}|${kind}`;
+    const hit = frames.get(key);
+    if (hit && now() - hit.at < TTL_MS) return hit;
+    if (hit) frames.delete(key);
+    const od = onDemand.get(key);
+    if (!od) return null;
+    if (now() - od.at >= OD_TTL_MS) {
+      onDemand.delete(key);
       return null;
     }
-    return hit;
+    return od;
   }
 
   /** 폴러 1틱 — latest.json 1회 + jma_s 프레임 1장(적응형 딜레이) 적재. 신규 프레임 정보를 반환(없으면 null) */
@@ -73,6 +92,7 @@ export function createFrameBuffer({ fetchImpl = fetch, now = Date.now } = {}) {
 
   return {
     put,
+    putOnDemand,
     get,
     pollOnce,
     getLatestJson,

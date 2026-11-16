@@ -42,6 +42,29 @@ describe('버퍼 put/get', () => {
     fb.put('20261107120003', 'jma_s', Buffer.alloc(0));
     expect(fb.size()).toBe(0);
   });
+
+  it('putOnDemand는 폴러 버퍼를 밀어내지 않고 get 폴백으로만 읽힌다', () => {
+    const { fb } = makeBuffer();
+    fb.put('20261107120001', 'jma_s', GIF);
+    // 외부 요청 120개 유효 과거 시각 도배 — 폴러 jma_s가 살아 있어야 함
+    for (let i = 0; i < 200; i++) {
+      fb.putOnDemand(String(i).padStart(14, '0'), 'jma_s', GIF);
+    }
+    expect(fb.get('20261107120001', 'jma_s')).not.toBeNull();
+    expect(fb.size()).toBe(1);
+    const od = fb.get('00000000000190', 'jma_s'); // on-demand 캐시 폴백(상한 내 최신 쪽)
+    expect(od).not.toBeNull();
+    expect(fb.get('00000000000005', 'jma_s')).toBeNull(); // 가장 오래된 것부터 퇴출
+    // on-demand는 catch-up 스트림 오염 안 함 — 폴러 jma_s만 나옴
+    expect(fb.getFramesAfter('00000000000000', 100).map(f => f.time)).toEqual(['20261107120001']);
+  });
+
+  it('on-demand 캐시도 TTL 만료 후 미스', () => {
+    const { fb, tick } = makeBuffer();
+    fb.putOnDemand('20261107120003', 'acmap_s', GIF);
+    tick(5 * 60_000 + 1);
+    expect(fb.get('20261107120003', 'acmap_s')).toBeNull();
+  });
 });
 
 describe('pollOnce', () => {
