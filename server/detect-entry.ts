@@ -50,7 +50,7 @@ export function initDetectCore(points: any[]) {
   return { features, stationsState };
 }
 
-/** 웹후크 에피소드 바디 — 클라이언트 services/webhook.ts episodeBody와 동일 */
+/** 웹후크 에피소드 바디 — detect-runner.mjs(서버 감지)와 Discord 리포트(webhook.mjs) 공용 형식 */
 export function makeEpisodeBody(
   start: number,
   end: number,

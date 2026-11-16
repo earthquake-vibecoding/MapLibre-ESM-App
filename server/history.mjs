@@ -1,5 +1,5 @@
-// 감지 에피소드 서버 기록 — 클라이언트 detector가 판정한 에피소드를 POST로 받아 data/history-detect.json에 적재.
-// Discord 릴레이(webhook.mjs)와 독립: 웹후크가 꺼져도 기록은 항상 남는다 (아키텍처 A: 감지는 클라이언트, 기록은 서버).
+// 감지 에피소드 서버 기록 — detect-runner.mjs가 판정한 에피소드를 data/history-detect.json에 적재.
+// Discord 릴레이(webhook.mjs)와 독립: 웹후크가 꺼져도 기록은 항상 남는다 (감지·기록 모두 서버 소관).
 import express from 'express';
 import fs from 'node:fs';
 import path from 'node:path';

@@ -14,11 +14,10 @@ import { dbg } from '../debug';
 import { VIEW } from '../config';
 import type { MapController } from '../map/map-controller';
 
-/** 서버 detect-runner.mjs가 1Hz로 방송하는 frame 이벤트 페이로드 */
+/** 서버 detect-runner.mjs가 1Hz로 방송하는 frame 이벤트 페이로드 (gif base64는 소비자 없어 미전송) */
 export interface FrameEvent {
   time: string; // 14자리 JST
   delayMs: number;
-  gif: string; // jma_s 프레임 base64 — 지도/GifView 표시용
   j: number[]; // 관측소 순서 계측진도×10 (-30 = 데이터 없음)
   c: number[]; // 관측소 순서 픽셀색 0xRRGGBB (-1 = 투명) — kmoni 연속 컬러맵 유지
   ev: { c: string; m: number; s: number }[]; // 이벤트 활성 관측소 (code, maxJindo×10, startTime)
@@ -42,7 +41,7 @@ function formatJst(t: string): string {
 }
 
 /** 표시 전용 — 시각만. 부재 복귀 되감기(catch-up)도 이 경로로 그린다 */
-export function applyFrameDisplay(e: Pick<FrameEvent, 'time' | 'gif'>): void {
+export function applyFrameDisplay(e: Pick<FrameEvent, 'time'>): void {
   ui.latestTime = formatJst(e.time);
 }
 

@@ -19,7 +19,7 @@ function host(): RealtimeHost {
 }
 
 const frame = (over: Partial<FrameEvent>): FrameEvent => ({
-  time: '20261114120000', delayMs: 2000, gif: '', j: [], c: [], ev: [],
+  time: '20261114120000', delayMs: 2000, j: [], c: [], ev: [],
   sound: null, center: null, ended: null, ...over
 });
 

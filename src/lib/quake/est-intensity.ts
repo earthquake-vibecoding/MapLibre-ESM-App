@@ -5,6 +5,7 @@
  * S파 도달 대기 없이 EEW 수신 즉시 전체 예측 분포를 색칠 — 보고서(M/깊이) 갱신 때 재계산.
  */
 import { getIntensityColor, jindoToScale } from './jma-utils';
+import { maskOpacity } from './est-shindo'; // 투명도 단계 단일 출처 (est-shindo.ts — GIF 마스크와 공유)
 import { parseScale } from '../services/chime';
 
 // Si & Midorikawa (1999) 감쇠식 계수
@@ -111,15 +112,4 @@ export function buildLocalMaskFc(features: any[], eew: any): any {
   });
 
   return { type: 'FeatureCollection', features: out };
-}
-
-/** 계측진도 → 면 투명도 (GIF 마스크와 동일 단계) */
-export function maskOpacity(maxJindo: number): number {
-  if (maxJindo >= 6.5) return 0.95;       // 진도 7
-  if (maxJindo >= 5.5) return 0.90;       // 진도 6약, 6강
-  if (maxJindo >= 4.5) return 0.85;       // 진도 5약, 5강
-  if (maxJindo >= 3.5) return 0.75;       // 진도 4
-  if (maxJindo >= 2.5) return 0.60;       // 진도 3
-  if (maxJindo >= 1.5) return 0.45;       // 진도 2
-  return 0.30;                            // 진도 1
 }

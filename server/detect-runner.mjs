@@ -128,7 +128,8 @@ function onFrame({ timeStr, buf, delay }) {
     }
   }
 
-  // SSE frame 푸시 — j[]/c[]는 관측소 순서(intensity-points-v1.json)와 정렬. -30 = 진도 없음, c -1 = 투명 픽셀
+  // SSE frame 푸시 — j[]/c[]는 관측소 순서(intensity-points-v1.json)와 정렬. -30 = 진도 없음, c -1 = 투명 픽셀.
+  // gif base64는 클라 소비자가 없어 전송하지 않음(브라우저 표시는 c[] 컬러맵) — 프레임 이미지가 필요하면 /api/realtime-img
   const j = [];
   const c = [];
   const ev = [];
@@ -143,7 +144,6 @@ function onFrame({ timeStr, buf, delay }) {
   broadcast('frame', {
     time: timeStr,
     delayMs: delay,
-    gif: buf.toString('base64'),
     j,
     c,
     ev,

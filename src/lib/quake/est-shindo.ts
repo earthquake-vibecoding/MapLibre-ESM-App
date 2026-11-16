@@ -182,6 +182,7 @@ class EstShindoMask {
   }
 }
 
+/** 계측진도 → 면 투명도 — 단일 출처 (EEW 로컬 예상진도 마스크 est-intensity.ts도 import) */
 export function maskOpacity(maxJindo: number): number {
   if (maxJindo >= 6.5) return 0.95;       // 진도 7
   if (maxJindo >= 5.5) return 0.90;       // 진도 6약, 6강

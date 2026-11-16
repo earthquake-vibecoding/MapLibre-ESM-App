@@ -1,7 +1,7 @@
 /**
  * 감지 이벤트 기록 — 만료 증발하는 감지를 에피소드 단위로 저장해 다시 볼 수 있게 함.
- * ticker가 만료 직전 accumulateExpiredEvent()를, 전체 종료 시 finishDetectionEpisode()를 호출.
- * localStorage 'detection_log'에 최신순 최대 50건.
+ * SSE frame의 ended 엔트리(realtime-img applyFrameData)를 받아 localStorage 'detection_log'에 최신순 최대 50건.
+ * 판정·accumulateExpiredEvent·finishDetectionEpisode는 서버 detect-runner.mjs/detect-core 소관.
  */
 
 import { KEYS } from '../config';

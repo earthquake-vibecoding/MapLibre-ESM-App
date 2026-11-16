@@ -1,5 +1,5 @@
-// wolfx EEW WS 서버 수신 — 클라이언트 직접 연결 폐지. 수신 → SSE 'eew' 푸시 + Discord 웹후크.
-// 필터/바디는 클라이언트 wolfx-eew.svelte.ts + services/webhook.ts reportEew와 동일 기준.
+// wolfx EEW WS 서버 수신 — 클라이언트는 SSE 'eew'만 받음. 수신 → SSE 푸시 + Discord 웹후크.
+// 필터/바디 기준은 클라이언트 wolfx-eew.svelte.ts mapWolfx와 대응 (서버는 리포트 발송도 담당).
 import { connectWithBackoff } from './ws-feed.mjs';
 import { broadcast } from './push.mjs';
 import { sendEewReport } from './webhook.mjs';

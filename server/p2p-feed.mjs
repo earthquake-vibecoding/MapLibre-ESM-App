@@ -7,7 +7,7 @@ import { sendEewReport } from './webhook.mjs';
 const P2P_WS = 'wss://api.p2pquake.net/v2/ws';
 let eewNonce = null;
 
-/** 556 → 웹후크 바디 — 클라이언트 p2p-quake.svelte.ts mappedEew + reportEew와 동일 기준 */
+/** 556 → 웹후크 바디 — 클라이언트 p2p-quake.svelte.ts map556ToEew와 대응 (서버는 리포트 발송도 담당) */
 async function reportEew556(data) {
   const maxScaleFrom = Math.max(...(data.areas?.map(a => a.scaleFrom) || [0]));
   const mapped = {

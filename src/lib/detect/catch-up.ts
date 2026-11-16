@@ -1,7 +1,7 @@
 /**
  * 부재 복귀 catch-up — 절전/탭 부재 후 복귀하면 오래된 프레임에서 현재로 확 넘어가는 스냅 대신,
  * 서버 버퍼(frame-buffer TTL 15분)에 남은 프레임을 25fps 가속 재생(타임랩스)해 자연스럽게 따라잡는다.
- * 재생은 표시(gif/시각)만 소장 — 색칠/사운드/알림은 applyFrameData가 재생 중에도 실시간으로 처리.
+ * 재생은 표시(시각)만 소장 — 색칠/사운드/알림은 applyFrameData가 재생 중에도 실시간으로 처리.
  */
 import { applyFrameDisplay } from './realtime-img';
 import type { FrameEvent } from './realtime-img';
@@ -51,7 +51,7 @@ export function startCatchUp(fromTime: string): void {
   fetch(`/api/frame-history?from=${fromTime}`)
     .then(r => r.json())
     .then(body => {
-      const frames: { time: string; gif: string }[] = Array.isArray(body?.frames) ? body.frames : [];
+      const frames: { time: string }[] = Array.isArray(body?.frames) ? body.frames : [];
       if (frames.length === 0) return finish();
       let i = 0;
       timer = setInterval(() => {

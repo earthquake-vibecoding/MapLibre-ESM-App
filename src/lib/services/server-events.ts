@@ -8,6 +8,7 @@ import { applyFrameEvent, type FrameEvent, type RealtimeHost } from '../detect/r
 import { p2pQuakeService } from './p2p-quake.svelte';
 import { wolfxEewService } from './wolfx-eew.svelte';
 import { ui } from '../state.svelte';
+import { TIMING } from '../config';
 
 export interface ServerEventsHandlers {
   host: RealtimeHost;
@@ -15,7 +16,7 @@ export interface ServerEventsHandlers {
   onEew: (mappedEew: any) => void;
 }
 
-const RETRY_DELAYS_MS = [1000, 2000, 4000, 8000, 15000, 30000];
+const RETRY_DELAYS_MS = TIMING.sseRetryDelaysMs;
 
 let handlers: ServerEventsHandlers | null = null;
 let es: EventSource | null = null;

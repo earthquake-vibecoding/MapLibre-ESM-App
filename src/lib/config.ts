@@ -26,7 +26,6 @@ export const TIMING = {
   waveThrottleMs: 33,      // P/S파 렌더 스로틀 (≈30fps)
   maskThrottleMs: 500,     // 예상진도 마스크 갱신 스로틀 (로컬 계산)
   p2pKeepMs: 180_000,      // 실시간 수신 지진 정보 유지 시간
-  kmoniLagS: 2,            // kmoni 발행 지연 보정 (초)
   shindoSoundGapMs: 1500,  // 같은 계급 진도음 재생 최소 간격
   eewSoundGapMs: 10_000,   // 같은 EEW 음성 재생 최소 간격
   detectBeepGapMs: 15_000, // 감지 비프(shi0) 쓰로틀
@@ -36,9 +35,7 @@ export const TIMING = {
   simGuardMs: 120_000,     // 시뮬레이션 진행 중 실제 EEW 수신 차단 시간
   soundOverlapMs: 200,     // 계급음 겹침 방지 지연 (triggerScaleSound)
   estGifGuardMs: 8000,     // 예상진도 GIF 로드 타임아웃 가드
-  wsBaseMs: 5000,          // WS 재접속 초기 백오프
-  wsMaxMs: 30000,          // WS 재접속 최대 백오프
-  wsBackoff: 1.5,          // WS 재접속 백오프 배수
+  sseRetryDelaysMs: [1000, 2000, 4000, 8000, 15000, 30000], // SSE 재접속 지수 백오프 (server-events.ts)
 } as const;
 
 /** 외부 API 엔드포인트 — 외부 채널(p2p/wolfx WS)은 서버가 수신하고 SSE로 릴레이하므로 클라이언트는 동일 출처만 사용 */
@@ -67,7 +64,7 @@ export const ALERT = {
   shindoVolume: 0.85,      // Shindo.wav 볼륨
 } as const;
 
-/** 웹후크 리포트 (services/webhook.ts → server/webhook.mjs → Discord) */
+/** 웹후크 리포트 판정 기준 — 감지는 서버(detect-runner.mjs → server/webhook.mjs)가 수행하며 이 임계값을 detect-core 번들로 공유 */
 export const WEBHOOK = {
   minJindo: 0.5,           // 감지 에피소드 리포트 최소 최대계측진도 (진도1 미만 무시)
 } as const;
