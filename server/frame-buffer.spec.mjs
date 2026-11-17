@@ -116,6 +116,28 @@ describe('pollOnce', () => {
     tick(61_000);
     expect(fb.getLatestJson()).toBeNull();
   });
+
+  it('시간 역행 프레임 무시 — 적응 딜레이 되돌림이 감지기를 오염시키지 않음', async () => {
+    // 신규 스탬프는 404, 12:00:03(이미 적재 예정)과 12:00:05만 성공하는 upstream
+    const staleFetch = async (url) => {
+      if (url.includes('latest.json')) return { ok: true, text: async () => '{}' };
+      if (url.includes('20261107120003.') || url.includes('20261107120005.')) {
+        return { ok: true, arrayBuffer: async () => GIF };
+      }
+      return { ok: false };
+    };
+    const { fb, tick } = makeBuffer(staleFetch);
+    // 틱1: delay 2000 → 12:00:03 적재
+    await fb.pollOnce();
+    expect(fb.get('20261107120003', 'jma_s')).not.toBeNull();
+    // 틱2: 12:00:04/02 등 신규는 전부 404 → 유일하게 성공하는 12:00:03은 역행 → 무시
+    tick(1000);
+    expect(await fb.pollOnce()).toBeNull();
+    // 틱3: 정상 신규 프레임은 계속 적재
+    tick(1000);
+    await fb.pollOnce();
+    expect(fb.get('20261107120005', 'jma_s')).not.toBeNull();
+  });
 });
 
 describe('getFramesAfter — 부재 복귀 되감기', () => {
@@ -139,5 +161,14 @@ describe('getFramesAfter — 부재 복귀 되감기', () => {
     expect(fb.getFramesAfter('20261107120000', 100).map(f => f.time)).toEqual(['20261107120002']);
     expect(fb.getFramesAfter('javascript:alert(1)', 100)).toEqual([]);
     expect(fb.getFramesAfter('', 100)).toEqual([]);
+  });
+
+  it('삽입 순서가 뒤섞여도 시각 오름차순 — 정렬을 직접 강제', () => {
+    const { fb } = makeBuffer();
+    fb.put('20261107120003', 'jma_s', GIF);
+    fb.put('20261107120001', 'jma_s', GIF);
+    fb.put('20261107120002', 'jma_s', GIF);
+    expect(fb.getFramesAfter('20261107120000', 100).map(f => f.time))
+      .toEqual(['20261107120001', '20261107120002', '20261107120003']);
   });
 });

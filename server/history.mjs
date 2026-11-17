@@ -1,5 +1,6 @@
 // 감지 에피소드 서버 기록 — detect-runner.mjs가 판정한 에피소드를 data/history-detect.json에 적재.
 // Discord 릴레이(webhook.mjs)와 독립: 웹후크가 꺼져도 기록은 항상 남는다 (감지·기록 모두 서버 소관).
+// 적재는 서버 내부(detect-runner) 전용 — HTTP 쓰기 엔드포인트는 무인증 위조 경로라 두지 않는다.
 import express from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -20,14 +21,14 @@ export function createHistoryStore(dir, maxEntries = MAX_ENTRIES_DEFAULT) {
     // 최초 실행/손상 파일 — 빈 배열로 시작
   }
 
+  // 이벤트 루프 블로킹 없이 비동기 기록 — 실패 시 메모리 기록만 유지하고 서비스는 계속
   function persist() {
-    try {
-      fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(file, JSON.stringify({ items }));
-    } catch (err) {
-      // 읽기전용 cwd(Electron 패키지 등) — 메모리 기록만 유지하고 서비스는 계속
-      console.warn('[History] persist 실패 (메모리만 유지):', err?.message ?? err);
-    }
+    fs.promises.mkdir(dir, { recursive: true })
+      .then(() => fs.promises.writeFile(file, JSON.stringify({ items })))
+      .catch((err) => {
+        // 읽기전용 cwd(Electron 패키지 등) — 메모리 기록만 유지하고 서비스는 계속
+        console.warn('[History] persist 실패 (메모리만 유지):', err?.message ?? err);
+      });
   }
 
   return {
@@ -43,18 +44,12 @@ export function createHistoryStore(dir, maxEntries = MAX_ENTRIES_DEFAULT) {
   };
 }
 
+/** GET 전용 — 목록 조회. 쓰기는 서버 내부(detect-runner → getHistoryStore)로만 들어온다 */
 export function createHistoryApp(store) {
   const app = express();
-  app.use(express.json({ limit: '8kb' }));
 
   app.get('/', (req, res) => {
     res.json({ items: store.items() });
-  });
-
-  app.post('/detect', (req, res) => {
-    const entry = store.add(req.body);
-    if (!entry) return res.status(400).json({ error: 'Invalid payload' });
-    res.status(201).json({ saved: entry.id });
   });
 
   return app;

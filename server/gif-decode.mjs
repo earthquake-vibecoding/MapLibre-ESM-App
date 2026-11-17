@@ -3,6 +3,8 @@
 // 검증: scripts/gif-decode-check.mjs가 ffmpeg RGBA 결과와 픽셀 일치 대조.
 
 const MAX_CODE = 4096;
+// kmoni 프레임은 720×480(345,600px). 헤더 위조(65535×65535≈17GB 할당 → OOM) 차단 상한.
+const MAX_PIXELS = 2_000_000;
 
 function parseBlocks(buf, p) {
   // 서브블록 체인 → 하나의 Uint8Array로 합침 (p는 첫 서브블록 크기 바이트)
@@ -97,6 +99,8 @@ export function decodeGifRgba(buf) {
   if (buf.length < 14 || buf[0] !== 0x47 || buf[1] !== 0x49 || buf[2] !== 0x46 || buf[3] !== 0x38) return null;
   const width = buf.readUInt16LE(6);
   const height = buf.readUInt16LE(8);
+  // 헤더 w/h 무검증 할당 차단 — 화면 크기는 참고용이지만 이후 rgba 버퍼에 곱해진다
+  if (width === 0 || height === 0 || width * height > MAX_PIXELS) return null;
   const screenFlags = buf[10];
   let p = 13;
 
@@ -123,6 +127,7 @@ export function decodeGifRgba(buf) {
       const flags = buf[p + 9];
       const ix = buf.readUInt16LE(p + 1), iy = buf.readUInt16LE(p + 3);
       const iw = buf.readUInt16LE(p + 5), ih = buf.readUInt16LE(p + 7);
+      if (iw === 0 || ih === 0 || iw * ih > MAX_PIXELS) return null; // LZW 버퍼(iw*ih)도 동일 상한
       p += 10;
       let palette = gct;
       if (flags & 0x80) {

@@ -15,6 +15,7 @@ export function createFrameBuffer({ fetchImpl = fetch, now = Date.now } = {}) {
   const onDemand = new Map(); // 요청 경로 온디맨드 캐시 — 폴러 버퍼와 절대 섞이지 않음
   let latest = null; // { body, at }
   let optimalDelay = 2000;
+  let lastPollTime = ''; // 마지막 적재 jma_s 스탬프 — 시간 역행/중복 프레임 차단
   let lastSuccessAt = 0;
   let consecutiveFailures = 0;
 
@@ -63,6 +64,10 @@ export function createFrameBuffer({ fetchImpl = fetch, now = Date.now } = {}) {
     if (body) latest = { body, at: now() };
     const frame = await fetchKmoniGif(fetchImpl, now(), optimalDelay);
     if (frame) {
+      // 적응형 딜레이(base-1000 후포함)가 이전 틱보다 오래된/같은 프레임을 새 프레임으로
+      // 적재하면 감지기가 감쇠 구간을 "흔들림 상승"으로 오판한다 — 역행/중복은 무시.
+      if (frame.timeStr <= lastPollTime) return null;
+      lastPollTime = frame.timeStr;
       optimalDelay = frame.delay;
       put(frame.timeStr, 'jma_s', frame.buf);
       lastSuccessAt = now();
@@ -78,7 +83,7 @@ export function createFrameBuffer({ fetchImpl = fetch, now = Date.now } = {}) {
   }
 
   /** from(14자리 JST) 이후 jma_s 프레임 시간 오름차순 최대 cap장 — 부재 복귀 되감기(catch-up)용.
-   *  폴러가 시간순 적재하므로 삽입 순서 = 시간 순서. 14자리 고정폭이라 문자열 비교가 곧 시간 비교. */
+   *  삽입 순서에 의존하지 않고 시각으로 직접 정렬 (14자리 고정폭이라 문자열 비교가 곧 시간 비교). */
   function getFramesAfter(from, cap) {
     if (!/^\d{14}$/.test(from)) return [];
     const out = [];
@@ -87,6 +92,7 @@ export function createFrameBuffer({ fetchImpl = fetch, now = Date.now } = {}) {
       const time = key.slice(0, 14);
       if (time > from) out.push({ time, buf: v.buf });
     }
+    out.sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
     return out.slice(-cap); // cap 초과 시 가장 오래된 것부터 버림 — 항상 최신 쪽까지 따라잡음
   }
 

@@ -42,32 +42,29 @@ describe('createHistoryStore', () => {
     expect(s.items().length).toBe(0);
   });
 
-  it('파일 영속 — 새 스토어가 재로드', () => {
+  it('파일 영속 — 새 스토어가 재로드', async () => {
     const dir = tmpDir();
     createHistoryStore(dir, 5).add(body);
+    await new Promise(r => setTimeout(r, 50)); // 비동기 persist 완료 대기
     expect(createHistoryStore(dir, 5).items().length).toBe(1);
   });
 });
 
 describe('history HTTP 엔드포인트', () => {
-  it('POST /detect 201, 무효 400, GET / 목록', async () => {
-    const app = createHistoryApp(createHistoryStore(tmpDir(), 100));
+  it('GET / 목록, POST /detect는 폐지(404)', async () => {
+    const store = createHistoryStore(tmpDir(), 100);
+    store.add(body);
+    const app = createHistoryApp(store);
     const srv = app.listen(0);
     const base = `http://localhost:${srv.address().port}`;
+    const list = await fetch(base).then(r => r.json());
+    expect(list.items.length).toBe(1);
     const post = await fetch(`${base}/detect`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     });
-    expect(post.status).toBe(201);
-    const bad = await fetch(`${base}/detect`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({})
-    });
-    expect(bad.status).toBe(400);
-    const list = await fetch(base).then(r => r.json());
-    expect(list.items.length).toBe(1);
+    expect(post.status).toBe(404); // 무인증 쓰기 엔드포인트 — 존재하지 않음
     srv.close();
   });
 });

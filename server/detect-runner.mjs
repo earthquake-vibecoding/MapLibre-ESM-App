@@ -23,6 +23,7 @@ let activeDetectMessage = null; // { id, nonce } — 종료 PATCH 대상
 
 // 마지막 활성 프레임 — 종료 리포트 스냅샷(흔들림 당시 프레임)용
 let lastActive = null; // { rgba, width, height, hits }
+let lastFrameTime = ''; // 마지막 처리 스탬프 — 시간 역행 프레임 재처리 차단(유령 상승 방지)
 
 function resolveStationsPath() {
   const here = path.dirname(fileURLToPath(import.meta.url));
@@ -94,6 +95,8 @@ async function reportFinal(entry) {
 
 function onFrame({ timeStr, buf, delay }) {
   if (!stations) return;
+  if (timeStr <= lastFrameTime) return; // 시간 역행/중복 — 과거 프레임 재처리가 감쇠를 상승으로 오판
+  lastFrameTime = timeStr;
   const decoded = decodeGifRgba(buf);
   if (!decoded) return;
   const nowTick = Date.now();
