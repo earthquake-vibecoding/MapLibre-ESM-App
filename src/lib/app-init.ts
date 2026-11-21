@@ -1,7 +1,6 @@
 import { app } from './app-controller';
 import { ui } from './state.svelte';
 import { p2pQuakeService } from './services/p2p-quake.svelte';
-import { createMapController } from './map/map-controller';
 import { loadAreaData } from './quake/area-data';
 import { loadStations } from './quake/stations';
 import { fetchSeismicData } from './detect/seismic';
@@ -38,7 +37,15 @@ export async function initApp(container: HTMLElement): Promise<void> {
     app.seismicData = data;
   });
 
+  // LCP 단축 — 지역/관측소 데이터 fetch와 quake 피드를 맵 준비와 병렬 기동.
+  // 핸들러·app 메서드는 전부 mapCtl null-guard라 맵이 없어도 안전(no-op). 패널은 맵 타일 대기 없이 p2p 응답만 기다림
+  const areaPromise = loadAreaData();
+  const stationPromise = loadStations();
+  startQuakeFeed(createFeedHandlers(app), app);
+
+  // maplibre(~970KB)는 별도 청크로 지연 로드 — 패널·피드는 맵 다운로드를 기다리지 않음
   try {
+    const { createMapController } = await import('./map/map-controller');
     app.mapCtl = await createMapController(container);
   } catch (error) {
     console.warn('Failed to create map controller:', error);
@@ -49,7 +56,7 @@ export async function initApp(container: HTMLElement): Promise<void> {
     return;
   }
 
-  const [areaData, stationData] = await Promise.all([loadAreaData(), loadStations()]);
+  const [areaData, stationData] = await Promise.all([areaPromise, stationPromise]);
   if (seq !== initSeq) {
     app.mapCtl?.destroy();
     return;
@@ -58,6 +65,7 @@ export async function initApp(container: HTMLElement): Promise<void> {
   app.geojson = stationData.geojson;
   app.stationsState = stationData.stationsState;
 
+  // 피드가 맵보다 먼저 도착해 초기 갱신이 no-op여도 onMapReady가 selectedQuake로 재적용함
   if (app.mapCtl) {
     app.mapCtl.setInitialData('points', app.geojson);
     app.mapCtl.setInitialData('area-forecast', areaData.areaForecastGeoJSON);

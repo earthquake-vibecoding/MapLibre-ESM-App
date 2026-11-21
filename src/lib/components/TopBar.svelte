@@ -49,11 +49,13 @@
     <span
       class={'w-2 h-2 rounded-full shrink-0 ' + (sseConnected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500')}
       title={sseConnected ? t('실시간 연결 중') : t('연결 끊김 — 재접속 대기')}></span>
+    <span class="text-[11px] text-zinc-400 dark:text-zinc-500 shrink-0 hidden sm:inline" title={t('kmoni 프레임 시각')}>{t('데이터')}</span>
     <span class="font-mono text-xs sm:text-sm tabular-nums text-zinc-500 dark:text-zinc-400 truncate min-w-0 hidden sm:inline" title={t('kmoni 프레임 시각')}>
       {latestTime || t('시간 로딩 중...')}
     </span>
+    <span class="text-[11px] text-zinc-400 dark:text-zinc-500 shrink-0 hidden sm:inline" title={t('실제 현재 시각')}>{t('현재')}</span>
     <span class="font-mono text-xs sm:text-sm tabular-nums text-zinc-400 dark:text-zinc-500 shrink-0 hidden sm:inline" title={t('실제 현재 시각')}>
-      · {now}
+      {now}
     </span>
   </div>
 

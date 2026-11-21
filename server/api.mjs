@@ -174,6 +174,8 @@ const P2P_HISTORY_BASE = 'https://api.p2pquake.net/v2/history?codes=551&limit=10
 let p2pHistoryCache = { at: 0, offset: '', data: null };
 app.get('/p2p-history', async (req, res) => {
   const offset = typeof req.query['offset'] === 'string' ? req.query['offset'] : '0';
+  // 브라우저 30s 캐시 — 부팅 fetch가 매번 CF→오사카 재검증 왕복(~1s) 하는 걸 제거(LCP). 서버 캐시와 동일 30s 정책
+  res.set('Cache-Control', 'public, max-age=30, s-maxage=30');
   const now = Date.now();
   if (p2pHistoryCache.data && p2pHistoryCache.offset === offset && now - p2pHistoryCache.at < 30_000) {
     return res.json(p2pHistoryCache.data);

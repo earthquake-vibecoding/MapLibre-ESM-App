@@ -37,6 +37,11 @@ export class MapController {
 
   setInitialData(id: string, data: any): void {
     this.initialData.set(id, data);
+    // 로드가 먼저 끝났으면 bootMap을 못 타므로 즉시 적용 (느린 네트워크 레이스 방지)
+    if (this.live()) {
+      const source = this.map.getSource(id);
+      if (source) source.setData(data);
+    }
   }
 
   setSource(id: string, data: any): void {

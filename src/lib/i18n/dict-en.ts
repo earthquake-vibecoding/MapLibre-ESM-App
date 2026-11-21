@@ -9,6 +9,8 @@ export const DICT_EN: Record<string, string> = {
   '실시간 연결 중': 'Live connection',
   '연결 끊김 — 재접속 대기': 'Disconnected — reconnecting',
   'kmoni 프레임 시각': 'kmoni frame time',
+  '데이터': 'Data',
+  '현재': 'Now',
   '실제 현재 시각': 'Actual current time',
   '브라우저 알림 설정': 'Browser notification settings',
   '브라우저 알림 ON (클릭 시 OFF)': 'Browser notifications ON (click to turn OFF)',

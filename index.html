@@ -5,6 +5,8 @@
     <title>지진 모니터</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <!-- LCP 단축: p2p 초기 이력을 번들 다운로드와 병렬로 미리 당김. crossorigin 필수 — fetch()는 같은 출처도 cors 모드라 없으면 요청 모드 불일치로 미사용+이중 다운로드 -->
+    <link rel="preload" as="fetch" crossorigin href="/api/p2p-history?offset=0" />
   </head>
   <body class="bg-white m-0 p-0 overflow-hidden">
     <div id="app"></div>
