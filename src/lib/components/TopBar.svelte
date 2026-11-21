@@ -44,21 +44,21 @@
 </script>
 
 <div class="absolute top-0 inset-x-0 z-30 h-12 px-3 flex items-center gap-3 bg-white border-b border-zinc-200 text-zinc-800 dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-100">
-  <!-- 좌측: 수신 상태 + 프레임 기준 시각 + 실제 시각 -->
-  <div class="flex items-center gap-2 min-w-0 shrink-0">
+  <!-- 좌측: 수신 상태 + 프레임 기준 시각 + 실제 시각 (flex-1로 우측과 너비 동일 → 탭 진짜 정중앙) -->
+  <div class="flex-1 min-w-0 flex items-center gap-2">
     <span
       class={'w-2 h-2 rounded-full shrink-0 ' + (sseConnected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500')}
       title={sseConnected ? t('실시간 연결 중') : t('연결 끊김 — 재접속 대기')}></span>
-    <span class="font-mono text-xs sm:text-sm tabular-nums text-zinc-500 dark:text-zinc-400 truncate hidden sm:inline" title={t('kmoni 프레임 시각')}>
+    <span class="font-mono text-xs sm:text-sm tabular-nums text-zinc-500 dark:text-zinc-400 truncate min-w-0 hidden sm:inline" title={t('kmoni 프레임 시각')}>
       {latestTime || t('시간 로딩 중...')}
     </span>
-    <span class="font-mono text-xs sm:text-sm tabular-nums text-zinc-400 dark:text-zinc-500 hidden sm:inline" title={t('실제 현재 시각')}>
+    <span class="font-mono text-xs sm:text-sm tabular-nums text-zinc-400 dark:text-zinc-500 shrink-0 hidden sm:inline" title={t('실제 현재 시각')}>
       · {now}
     </span>
   </div>
 
   <!-- 중앙: 세그먼트 탭 -->
-  <div class="flex-1 flex items-center justify-center min-w-0">
+  <div class="flex-none flex items-center">
     <div class="flex items-stretch rounded-md border border-zinc-200 divide-x divide-zinc-200 overflow-hidden dark:border-zinc-700 dark:divide-zinc-700">
       {#each tabDefs as td (td.id)}
         <button
@@ -77,7 +77,7 @@
   </div>
 
   <!-- 우측: 알림 + 테마 -->
-  <div class="flex items-center gap-0.5 shrink-0">
+  <div class="flex-1 min-w-0 flex items-center justify-end gap-0.5">
     <button
       onclick={onToggleNotification}
       aria-label={t('브라우저 알림 설정')}

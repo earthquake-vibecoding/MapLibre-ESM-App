@@ -67,9 +67,8 @@ export const DICT_JA: Record<string, string> = {
   '원본 JSON': '元データ (JSON)',
   // EewBanner
   '속보': '速報',
-  '발생시각:': '発生時刻:',
-  '규모:': 'マグニチュード:',
-  '최대진도:': '最大震度:',
+  '경보': '警報',
+  '진도 {n}': '震度{n}',
   'EEW 진앙': 'EEW震央',
   '격자 이동': 'グリッドへ移動',
   // MapTools

@@ -68,9 +68,8 @@ export const DICT_EN: Record<string, string> = {
   // EewBanner
   '緊急地震速報': 'Earthquake Early Warning',
   '속보': 'Initial',
-  '발생시각:': 'Origin time:',
-  '규모:': 'Magnitude:',
-  '최대진도:': 'Max intensity:',
+  '경보': 'Warning',
+  '진도 {n}': 'Intensity {n}',
   'EEW 진앙': 'EEW epicenter',
   '격자 이동': 'Go to grid',
   // MapTools
