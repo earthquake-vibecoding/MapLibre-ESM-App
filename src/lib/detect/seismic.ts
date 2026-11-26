@@ -79,8 +79,8 @@ export interface WaveState {
   active: boolean;
   pFc: any;
   sFc: any;
-  pFade: number;
-  sFade: number;
+  center: [number, number]; // 진원 — 파 확산 카메라 추적용
+  sRadius: number;          // S파 현재 반경 km — 파 확산 카메라 추적용
 }
 
 export async function fetchSeismicData(): Promise<SeismicTable> {
@@ -114,7 +114,7 @@ export function computeWaveState(
   // 좌표 없는 EEW(진원 미확정)는 (0,0)에 거대 원이 그려지므로 링 자체를 끔 — 마커/플라이와 동일 가드
   const active = !!(eew && isActiveEEW(eew) && isEewCoordValid(eew));
   if (!active) {
-    return { active: false, pFc: EMPTY_FC, sFc: EMPTY_FC, pFade: 0, sFade: 0 };
+    return { active: false, pFc: EMPTY_FC, sFc: EMPTY_FC, center: [0, 0], sRadius: 0 };
   }
 
   let elapsedSeconds = 0;
@@ -129,10 +129,9 @@ export function computeWaveState(
   }
   depth = (typeof eew.Depth === 'number' && eew.Depth > 0) ? eew.Depth : 10;
   center = [eew.Longitude || 0, eew.Latitude || 0];
-  const mag = (typeof eew.Magunitude === 'number' && eew.Magunitude > 0) ? eew.Magunitude : 6.0;
 
   if (elapsedSeconds <= 0) {
-    return { active: true, pFc: EMPTY_FC, sFc: EMPTY_FC, pFade: 0, sFade: 0 };
+    return { active: true, pFc: EMPTY_FC, sFc: EMPTY_FC, center, sRadius: 0 };
   }
 
   let pRadius = 0;
@@ -152,20 +151,9 @@ export function computeWaveState(
     sRadius = sDistance > depth ? Math.sqrt(sDistance * sDistance - depth * depth) : sDistance;
   }
 
-  let maxSRadius: number = WAVE.maxRadiusDefault;
-  for (const [magUnder, radius] of WAVE.maxRadiusByMag) {
-    if (mag < magUnder) {
-      maxSRadius = radius;
-      break;
-    }
-  }
+  // 규모별 최대 반경·km 페이드 폐지 — 파는 EEW 활성 동안 페이드 없이 계속 퍼짐
+  const pFc = pRadius > 0 ? createGeoJSONCircle(center, pRadius, 36) : EMPTY_FC;
+  const sFc = sRadius > 0 ? createGeoJSONCircle(center, sRadius, 36) : EMPTY_FC;
 
-  const maxPRadius = maxSRadius * 1.25;
-  const pFade = Math.max(0, 1 - Math.pow(pRadius / maxPRadius, 2));
-  const sFade = Math.max(0, 1 - Math.pow(sRadius / maxSRadius, 2));
-
-  const pFc = (pRadius < maxPRadius && pFade > 0.01) ? createGeoJSONCircle(center, pRadius, 36) : EMPTY_FC;
-  const sFc = (sRadius < maxSRadius && sFade > 0.01) ? createGeoJSONCircle(center, sRadius, 36) : EMPTY_FC;
-
-  return { active: true, pFc, sFc, pFade, sFade };
+  return { active: true, pFc, sFc, center, sRadius };
 }

@@ -24,6 +24,8 @@ export class AppController {
   ticker: Ticker | null = null;
   lastEewKey: string | null = null;
   lastEewTime = 0;
+  lastEewEventKey: string | null = null; // 이벤트 식별(OriginTime_Hypocenter) — 갱신 속보는 같은 값
+  eewFlyDone = false;                    // 이벤트당 진원 자동 이동 1회 제한
 
   destroy(): void {
     this.ticker?.stop();

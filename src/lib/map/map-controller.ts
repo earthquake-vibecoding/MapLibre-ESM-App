@@ -1,7 +1,7 @@
 import { JAPAN_MAIN_BOUNDS } from './map-style';
 import { bootMap, createMapControllerInstance } from './map-boot';
 import { createStationHighlightMarker, type StationLocation } from './map-marker';
-import { VIEW } from '../config';
+import { VIEW, TIMING } from '../config';
 
 export interface VisState {
   tab: 'realtime' | 'earthquake';
@@ -128,16 +128,24 @@ export class MapController {
     }
   }
 
-  setWavePaint(pFade: number, sFade: number): void {
+  /** EEW 파 확산 추적 — S파 전면이 시야를 벗어날 때만 진원 중심 + 맞춤 줌으로 물러남.
+   *  파가 아직 시야 안이면(확대 필요) 건드리지 않아 첫 진원 플라이를 끊지 않음 */
+  followWaves(center: [number, number], radiusKm: number): void {
     if (!this.live()) return;
-    if (this.map.getLayer('p-wave-fill-layer')) {
-      this.map.setPaintProperty('p-wave-fill-layer', 'fill-opacity', 0.05 * pFade);
-      this.map.setPaintProperty('p-wave-layer', 'line-opacity', 0.8 * pFade);
-    }
-    if (this.map.getLayer('s-wave-fill-layer')) {
-      this.map.setPaintProperty('s-wave-fill-layer', 'fill-opacity', 0.09 * sFade);
-      this.map.setPaintProperty('s-wave-layer', 'line-opacity', 0.85 * sFade);
-    }
+    const latRad = (center[1] * Math.PI) / 180;
+    const latR = radiusKm / 110.6;
+    const lonR = radiusKm / Math.max(1, 111.3 * Math.cos(latRad));
+    const cam = this.map.cameraForBounds(
+      [[center[0] - lonR, center[1] - latR], [center[0] + lonR, center[1] + latR]],
+      { padding: 80 }
+    );
+    if (!cam?.zoom || cam.zoom >= this.map.getZoom()) return;
+    this.map.easeTo({
+      center: cam.center,
+      zoom: cam.zoom,
+      duration: TIMING.waveFollowMs + 100,
+      easing: (t: number) => t
+    });
   }
 
   blinkDetected(visible: boolean): void {

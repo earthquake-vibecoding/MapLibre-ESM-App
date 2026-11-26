@@ -21,6 +21,7 @@ export class Ticker {
   private animationId: number | null = null;
   private lastWaveRenderTime = 0;
   private lastMaskRenderTime = 0;
+  private lastFollowTime = 0;
   private wavesActive = false;
 
   constructor(private host: TickerHost) {}
@@ -107,9 +108,14 @@ export class Ticker {
       this.host.updateEpicenter();
     }
 
-    mapCtl.setWavePaint(wave.pFade, wave.sFade);
     mapCtl.setSource('p-wave', wave.pFc);
     mapCtl.setSource('s-wave', wave.sFc);
+
+    // 파 확산 카메라 추적 — S파 전면이 시야에 들어오도록 진원 중심 + 줌아웃만 (1초 스로틀, easeTo와 연속 이어짐)
+    if (wave.sRadius > 0 && now - this.lastFollowTime >= TIMING.waveFollowMs) {
+      this.lastFollowTime = now;
+      mapCtl.followWaves(wave.center, wave.sRadius);
+    }
 
     // 예상진도 마스크: EEW 수신 즉시 전체 분포 색칠 — 파 링(33ms)보다 낮은 주기로 갱신
     if (eew && now - this.lastMaskRenderTime >= TIMING.maskThrottleMs) {

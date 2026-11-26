@@ -25,6 +25,7 @@ export const TIMING = {
   blinkMs: 500,            // 감지 격자 점멸 주기
   waveThrottleMs: 33,      // P/S파 렌더 스로틀 (≈30fps)
   maskThrottleMs: 500,     // 예상진도 마스크 갱신 스로틀 (로컬 계산)
+  waveFollowMs: 1000,      // 파 확산 카메라 추적 스로틀 — easeTo 1초와 맞춰 연속 이동
   p2pKeepMs: 180_000,      // 실시간 수신 지진 정보 유지 시간
   shindoSoundGapMs: 1500,  // 같은 계급 진도음 재생 최소 간격
   eewSoundGapMs: 10_000,   // 같은 EEW 음성 재생 최소 간격
@@ -99,6 +100,4 @@ export const GRID = {
 export const WAVE = {
   fallbackPKmsPerS: 6.5,   // 테이블 없을 때 P파 속도 근사
   fallbackSKmsPerS: 3.5,   // 테이블 없을 때 S파 속도 근사
-  maxRadiusByMag: [[4.5, 300], [6.0, 450], [7.0, 600]] as [number, number][], // [규모 미만, 최대 반경 km]
-  maxRadiusDefault: 750,   // 상기 어느 것도 해당 없을 때
 } as const;

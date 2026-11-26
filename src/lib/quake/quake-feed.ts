@@ -5,7 +5,7 @@ import { soundService } from '../services/sound';
 import { ui } from '../state.svelte';
 import { TIMING } from '../config';
 import { getQuakeUniqueKey, isUnknownQuake } from './quake-utils';
-import { focusOnEarthquake } from '../focus';
+import { focusOnEarthquake, focusOnEew } from '../focus';
 import { startServerEvents, stopServerEvents } from '../services/server-events';
 import type { AppController } from '../app-controller';
 
@@ -69,6 +69,19 @@ function handleEew(c: AppController, mappedEew: any): void {
     soundService.playShindoAudio();
     notificationService.notifyEew(mappedEew);
   }
+
+  // EEW 신규 이벤트 첫 수신에만 진원으로 1회 자동 이동 — 갱신 속보마다 옮기면 화면이 난타되므로 이벤트 키로 제한.
+  // 좌표 미확정 첫속보면 focusOnEew 내부 가드가 스킵 (이벤트당 시도 1회)
+  const eventKey = `${mappedEew.OriginTime || ''}_${mappedEew.Hypocenter || ''}`;
+  if (eventKey !== c.lastEewEventKey) {
+    c.lastEewEventKey = eventKey;
+    c.eewFlyDone = false;
+  }
+  if (!c.eewFlyDone) {
+    c.eewFlyDone = true;
+    focusOnEew(c.mapCtl, mappedEew);
+  }
+
   c.updateEpicenter();
   // 예보 구역/지점이 있을 때만 색칠 — areas 없는 EEW(wolfx)가 기존 지진 탭 색을 지우지 않게 (원본은 EEW에서 색칠 안 함)
   if (mappedEew.areas?.length || mappedEew.points?.length) {
